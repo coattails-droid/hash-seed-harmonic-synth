@@ -32,7 +32,7 @@
 <body>
 <h1>TOURING × TONAL · MERGED AUDITION</h1>
 <div class="sub">Touring chassis: dot-field sequencer · production pluck / flam / heartbeat · weighted harmony × tuning<br>
-<span class="note">Tonal span folded in: pitch mode · interval path · second voice · beat gate · long loops · root / octave · bell &amp; throat voices · A4=432Hz</span></div>
+<span class="note">Tonal span folded in: pitch mode · interval path · second voice · beat gate · long loops · root / octave · throat-song voice · A4=432Hz</span></div>
 <canvas id="cv" width="480" height="480"></canvas>
 
 <div class="sec">PITCH — from Tonal</div>
@@ -84,7 +84,7 @@
    Walk), Interval Path + Contour + States as an alternate melody
    source (dots trigger, path orders the pitches), Second Voice,
    Euclidean Beat gate, Loop 16/27/36/45/54s, Root (12), Octave
-   band (C3/C4/C5), Voices (Pluck / Monastery Bell / Throat Song).
+   band (C3/C4/C5), Voices (Pluck / Throat Song / Both layered).
    ============================================================ */
 
 function xmur3(str){var h=1779033703^str.length;for(var i=0;i<str.length;i++){h=Math.imul(h^str.charCodeAt(i),3432918353);h=h<<13|h>>>19;}return function(){h=Math.imul(h^(h>>>16),2246822507);h=Math.imul(h^(h>>>13),3266489909);return (h^=h>>>16)>>>0;};}
@@ -129,7 +129,7 @@ var SECONDS_T=[
  {n:"Third below",  f:function(d,j){return d-2;}},
  {n:"Alternate",    f:function(d,j){return j%2===0?d+2:d-1;}}
 ];
-var VOICES=["Pluck","Monastery Bell","Throat Song","All three"];
+var VOICES=["Pluck","Throat Song","Both"];
 var LOOPS=[16,27,36,45,54];
 var OCTAVES=["C3","C4","C5"];
 var NAMES_S=["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
@@ -159,7 +159,7 @@ function tuneCents(ti,semiFromRoot,rootPc){
 /* ---------- state ---------- */
 var hash=randHash();
 var S={harmony:0,tune:0,mode:0,root:2,oct:1,melody:0,path:0,contour:0,states:5,
-       second:0,beatOn:0,pulses:6,bsteps:16,rot:0,loop:0,voice:3};
+       second:0,beatOn:0,pulses:6,bsteps:16,rot:0,loop:0,voice:2};
 var MAN={};
 function eff(k){return MAN[k]!==undefined?MAN[k]:S[k];}
 function dealAll(h){
@@ -298,22 +298,6 @@ function sinePluck(f,vel,t){  /* freq-domain pluck for overtone mode */
   fl.connect(g); g.connect(dryBus);
   var s=ctx.createGain(); s.gain.value=0.6; g.connect(s); s.connect(fxSend);
 }
-var BELL_PARTIALS=[[1.0,1.0,9.0],[2.02,0.55,6.0],[2.74,0.38,4.2],[3.93,0.24,3.0],[5.43,0.13,2.0]];
-function bellVoice(f,vel,t){
-  BELL_PARTIALS.forEach(function(p){
-    [-1,1].forEach(function(sgn){
-      var o=ctx.createOscillator(); o.type="sine";
-      o.frequency.value=f*p[0]*(1+sgn*0.0012);
-      var g=ctx.createGain(), peak=vel*0.16*p[1];
-      g.gain.setValueAtTime(0.0001,t);
-      g.gain.linearRampToValueAtTime(peak,t+0.09);
-      g.gain.setTargetAtTime(0.0001,t+0.09,p[2]/3);
-      o.connect(g); g.connect(dryBus);
-      var se=ctx.createGain(); se.gain.value=0.7; g.connect(se); se.connect(fxSend);
-      o.start(t); o.stop(t+14);
-    });
-  });
-}
 var droneNodes=null;
 function droneStart(){
   droneStop();
@@ -357,11 +341,10 @@ function throatNote(f,vel,t){
 }
 function voiceStrike(nf,vel,t,flam){
   var v=eff("voice");
-  /* All three (v=3): every voice layers on the same strike; bell and
-     throat are trimmed so the stack leaves headroom for the pluck. */
-  if(v===1||v===3)bellVoice(nf.f,vel*(v===3?0.7:1),t);
-  if(v===2||v===3)throatNote(nf.f,vel*(v===3?0.75:1),t);
-  if(v===0||v===3){
+  /* Both (v=2): pluck and throat layer on the same strike; the throat
+     overtone is trimmed so the stack leaves headroom for the pluck. */
+  if(v===1||v===2)throatNote(nf.f,vel*(v===2?0.75:1),t);
+  if(v===0||v===2){
     if(nf.mf!==null){ if(flam)pluck(nf.mf,vel,t-0.04); pluck(nf.mf,vel,t); }
     else sinePluck(nf.f,vel,t);
   }
@@ -499,8 +482,8 @@ function pick(id,i){
   if(k==="bsteps"){ var sl=document.getElementById("rotSlider"); sl.max=MAN.bsteps-1;
     if(eff("rot")>=MAN.bsteps){MAN.rot=0; sl.value=0; document.getElementById("rotVal").textContent="0";} }
   if(k==="harmony"||k==="mode")buildDots();
-  if(k==="voice"&&playing){ if(eff("voice")>=2)droneStart(); else droneStop(); }
-  if((k==="root"||k==="oct")&&playing&&eff("voice")>=2)droneStart();
+  if(k==="voice"&&playing){ if(eff("voice")>=1)droneStart(); else droneStop(); }
+  if((k==="root"||k==="oct")&&playing&&eff("voice")>=1)droneStart();
   applyState(); syncUI(); refreshReadout();
 }
 function tuneLocked(){ return eff("mode")===1||preset.lockTuning; }
@@ -559,7 +542,7 @@ playBtn.onclick=function(){
   if(playing){
     applyState();
     t0aud=ctx.currentTime+0.1; tickN=0; pathPtr=0; strikeCount=0;
-    if(eff("voice")>=2)droneStart();
+    if(eff("voice")>=1)droneStart();
     playBtn.textContent="⏸ STOP"; playBtn.classList.add("playing");
     timer=setTimeout(pump,50);
   }else{ playBtn.textContent="▶ PLAY"; playBtn.classList.remove("playing");
@@ -570,7 +553,7 @@ document.getElementById("newBtn").onclick=function(){
   hash=randHash(); MAN={}; dealAll(hash);
   var sl=document.getElementById("rotSlider"); sl.max=eff("bsteps")-1;
   buildDots(); applyState(); syncUI(); refreshReadout();
-  if(playing&&eff("voice")>=2)droneStart();
+  if(playing&&eff("voice")>=1)droneStart();
 };
 
 dealAll(hash);
