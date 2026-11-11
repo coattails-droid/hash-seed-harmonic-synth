@@ -181,6 +181,7 @@ function degCents(ti,letOff,semiFromRoot){
 
 /* ---------- state ---------- */
 var hash=randHash();
+var noteInst={}, keyHit={};   /* pitch instances per loop, for visualizer cores */
 var S={harmony:0,tune:2,root:2,oct:1,path:0,contour:0,states:5,
        loop:0,voice:2};
 var MAN={};
@@ -394,6 +395,14 @@ function doStrike(dotIdx,vel,t,half,degOv){
   var nf2=noteFreq(SECONDS_T[2].f(deg,strikeCount),d.oct,half);  /* second voice: Fifth above, locked */
   voiceStrike(nf2,vel*0.6,t,true);
   midiNote(nf2.mf,vel*0.6,t-0.04,0.045,1); midiNote(nf2.mf,vel*0.6,t,STEP,1);
+  /* record pitch instances for the visualizer cores: pitch key ->
+     {loop, dots that played it, last-hit time} */
+  var lp=Math.floor((t-t0aud)/LOOP_SEC);
+  [nf.mf,nf2.mf].forEach(function(mf){
+    var key=Math.round(mf*4), e=noteInst[key];
+    if(!e||e.loop!==lp){ e=noteInst[key]={loop:lp,dots:{}}; }
+    e.dots[dotIdx]=1; keyHit[key]=t-t0aud;
+  });
   strikeCount++;
   d.flash=t-t0aud;
 }
@@ -458,6 +467,7 @@ function draw(ts){
     if(gi===0)cx2d.moveTo(gx,gy); else cx2d.lineTo(gx,gy);
   }
   cx2d.stroke();
+  var curLp=Math.floor(el/LOOP_SEC);
   for(var i=0;i<dots.length;i++){
     var d=dots[i], b=dotBright(d,el);
     /* wiggle: tiny circle at the dot's own harmonic rate, phase-locked
@@ -480,6 +490,24 @@ function draw(ts){
         cx2d.globalAlpha=(1-s2/0.9)*(1-rp*0.25); cx2d.strokeStyle=d.color; cx2d.lineWidth=1.5;
         cx2d.beginPath(); cx2d.arc(x,y,rad+s2*46,0,7); cx2d.stroke();
       }
+      cx2d.globalAlpha=1;
+    }
+    /* Tidal-style core: a struck dot gets a grey core (#75808f, 60%)
+       with a near-black pinprick (#0b0b0b, 38% of the core). While a
+       pitch is within its tick, every other dot that played that same
+       pitch this loop shows the core too, dimmer — its instances. */
+    var coreA=0;
+    if(since>=0&&since<0.9)coreA=1-(since/0.9)*0.3;
+    else{
+      for(var kk in keyHit){
+        if(el-keyHit[kk]<STEP&&noteInst[kk]&&noteInst[kk].loop===curLp&&noteInst[kk].dots[i]){ coreA=0.55; break; }
+      }
+    }
+    if(coreA>0){
+      cx2d.globalAlpha=coreA; cx2d.fillStyle="#75808f";
+      cx2d.beginPath(); cx2d.arc(x,y,rad*0.6,0,7); cx2d.fill();
+      cx2d.fillStyle="#0b0b0b";
+      cx2d.beginPath(); cx2d.arc(x,y,rad*0.6*0.38,0,7); cx2d.fill();
       cx2d.globalAlpha=1;
     }
   }
