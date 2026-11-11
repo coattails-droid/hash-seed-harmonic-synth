@@ -42,21 +42,16 @@
   .track { width:64px; height:3px; background:#2a2a2a; border-radius:2px; }
   .fill { height:3px; background:#00f0ff; border-radius:2px; }
   select { background:#1a1a1a; color:#e8e4d8; border:1px solid #3a3a3a; border-radius:6px; font-family:monospace; font-size:12px; padding:8px; }
+  .soc { font-family:monospace; font-size:12px; letter-spacing:1px; text-decoration:none; border:1px solid #3a3a3a; border-radius:6px; padding:8px 16px; background:#1a1a1a; }
+  .soc:hover { background:#2a2a2a; }
 </style>
 </head>
 <body>
 <h1>HASH-SEED HARMONIC SYNTHESIZER</h1>
 <div class="credit">Designed by Calvin Fought (Coattails) in collaboration with Muse.</div>
-<div class="sub">Touring chassis: dot-field sequencer · production pluck / flam / heartbeat · weighted harmony × tuning<br>
-<span class="note">Tonal span folded in: interval path · second voice (fifth above) · long loops · root / octave · throat-song voice · A4=432Hz · tuning locked to Pythagorean</span></div>
 <div class="row" style="margin-top:10px">
   <button id="playBtn" class="big">▶ PLAY</button>
   <button id="newBtn" class="big">🎲 NEW TOKEN</button>
-</div>
-<div class="row" style="margin-top:0">
-  <button id="midiBtn">🎹 ENABLE MIDI OUT</button>
-  <select id="midiSel" style="display:none"></select>
-  <span class="note" id="midiStatus">live note stream for a DAW — pitch bend carries the Pythagorean spelling + A=432 offset</span>
 </div>
 <div class="readout" id="readout"></div>
 <canvas id="cv" width="480" height="480"></canvas>
@@ -80,8 +75,16 @@
 <div class="sec" style="color:#2e6bff">LOOP</div>
 <div class="row" id="loopRow"></div>
 
-<div class="sec" style="color:#8b2bff">VOICE — audition only</div>
-<div class="row" id="voiceRow"></div>
+<div class="row" style="margin-top:18px">
+  <button id="midiBtn">🎹 ENABLE MIDI OUT</button>
+  <select id="midiSel" style="display:none"></select>
+  <span class="note" id="midiStatus">live note stream for a DAW — pitch bend carries the Pythagorean spelling + A=432 offset</span>
+</div>
+<div class="row" id="socialRow" style="margin-bottom:26px">
+  <a class="soc" style="border-color:#2e6bff;color:#2e6bff" href="https://facebook.com/61595364196611" target="_blank" rel="noopener">Facebook</a>
+  <a class="soc" style="border-color:#ff2bd6;color:#ff2bd6" href="https://instagram.com/coattails_muse" target="_blank" rel="noopener">Instagram</a>
+  <a class="soc" style="border-color:#8b2bff;color:#8b2bff" href="https://youtube.com/@coattails47" target="_blank" rel="noopener">YouTube</a>
+</div>
 
 <script>
 "use strict";
@@ -612,33 +615,8 @@ function buildLoopRow(){
     el.appendChild(b);
   });
 }
-function wavePts(kind){
-  var pts=[], N=44;
-  for(var i=0;i<N;i++){
-    var t=i/(N-1), env, ph;
-    if(kind===0){ env=Math.exp(-3.2*t); ph=Math.sin(t*46)*env; }
-    else{ env=Math.pow(Math.sin(Math.PI*Math.min(1,t*1.04)),1.2); ph=Math.sin(t*30+Math.sin(t*9)*0.7)*env; }
-    pts.push((2+t*60).toFixed(1)+","+(10-ph*8.4).toFixed(1));
-  }
-  return pts.join(" ");
-}
-function buildVoiceRow(){
-  var el=document.getElementById("voiceRow"); el.innerHTML="";
-  VOICES.forEach(function(name,i){
-    var b=document.createElement("button");
-    b.classList.add("vbtn");
-    if(i===eff("voice"))b.classList.add("on");
-    var svg='<svg width="64" height="20">';
-    if(i!==1)svg+='<polyline points="'+wavePts(0)+'" fill="none" stroke="#b6ff00" stroke-width="1.4"/>';
-    if(i!==0)svg+='<polyline points="'+wavePts(1)+'" fill="none" stroke="#ff2bd6" stroke-width="1.4"/>';
-    svg+='</svg>';
-    b.innerHTML='<div>'+name+'</div>'+svg;
-    b.onclick=function(){pick("voiceRow",i);};
-    el.appendChild(b);
-  });
-}
 var KEYMAP={rootRow:"root",octRow:"oct",harmRow:"harmony",
-  pathRow:"path",contourRow:"contour",statesRow:"states",loopRow:"loop",voiceRow:"voice"};
+  pathRow:"path",contourRow:"contour",statesRow:"states",loopRow:"loop"};
 var VALMAP={states:[3,4,5,6,7,8]};
 function pick(id,i){
   var k=KEYMAP[id];
@@ -654,7 +632,6 @@ function syncUI(){
   mkRow("contourRow",CONTOURS,eff("contour"));
   mkRow("statesRow",[3,4,5,6,7,8],eff("states"));
   buildLoopRow();
-  buildVoiceRow();
 }
 function thirdDetune(){
   if(!preset.iv)return "n/a";
