@@ -470,7 +470,11 @@ function draw(ts){
      dot cycles between the near and far side. Project each dot,
      thread the spiral by depth, paint far side first. */
   var spin=-(playing?(ctx.currentTime-t0aud):performance.now()/1000)*0.122173;  /* 7 deg/s */
-  var cf=Math.cos(spin), sf=Math.sin(spin), ct=Math.cos(0.42), stt=Math.sin(0.42), SR=R*0.64;
+  var cf=Math.cos(spin), sf=Math.sin(spin), ct=Math.cos(0.42), stt=Math.sin(0.42);
+  /* sphere packs at 0.55 of frame, then the view zooms x1.6 so the
+     ball fills the frame again (0.88) — dots grow with the zoom,
+     which is what tightens the packing */
+  var ZOOM=1.6, SR=R*0.55*ZOOM;
   var AY=0.70711, AZ=0.70711;   /* spin axis (0, AY, AZ), unit */
   var proj=[];
   for(var pi=0;pi<dots.length;pi++){
@@ -498,8 +502,8 @@ function draw(ts){
     /* wiggle: tiny circle at the dot's own harmonic rate, phase-locked
        to its blink — it is at the top of its sway at every peak */
     var wp=Math.PI*2*(d.dir*el/LOOP_SEC*d.h+d.ph);
-    var x=pr.x+Math.cos(wp)*3.5,
-        y=pr.y+Math.sin(wp)*3.5, rad=(2+3*b)*dScale;
+    var x=pr.x+Math.cos(wp)*3.5*ZOOM,
+        y=pr.y+Math.sin(wp)*3.5*ZOOM, rad=(2+3*b)*dScale*ZOOM;
     cx2d.globalAlpha=(0.25+0.75*b)*dAlpha;
     var gs=rad*6;
     cx2d.drawImage(glowSprite(d.color),x-gs/2,y-gs/2,gs,gs);
@@ -513,7 +517,7 @@ function draw(ts){
         var s2=since-rp*0.22;
         if(s2<0||s2>=0.9)continue;
         cx2d.globalAlpha=(1-s2/0.9)*(1-rp*0.25)*dAlpha; cx2d.strokeStyle=d.color; cx2d.lineWidth=1.5;
-        cx2d.beginPath(); cx2d.arc(x,y,rad+s2*46*dScale,0,7); cx2d.stroke();
+        cx2d.beginPath(); cx2d.arc(x,y,rad+s2*46*dScale*ZOOM,0,7); cx2d.stroke();
       }
       cx2d.globalAlpha=1;
     }
