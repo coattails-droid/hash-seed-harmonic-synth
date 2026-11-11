@@ -56,14 +56,13 @@
 <div class="readout" id="readout"></div>
 <canvas id="cv" width="480" height="480"></canvas>
 
-<div class="sec" style="color:#b6ff00">PITCH — from Tonal</div>
+<div class="sec" style="color:#b6ff00">PITCH</div>
 <div class="row" id="rootRow"></div>
 <div class="row" id="octRow"></div>
 
-<div class="sec" style="color:#00ff66">HARMONY — Touring presets, hash slice 00–99, weighted</div>
+<div class="sec" style="color:#00ff66">HARMONY</div>
 <div class="row" id="harmRow"></div>
 <div class="sec" style="color:#00f0ff">MELODY — INTERVAL PATH</div>
-<div class="note" style="max-width:620px;text-align:center;line-height:1.6">The dots only decide <b>when</b> a note plays. These buttons decide <b>which</b> notes, in order:<br>pick a pattern, a shape, and how many notes it has. The picture is the melody, left to right.</div>
 <div class="rlabel">pattern</div>
 <div class="row" id="pathRow"></div>
 <div class="rlabel">shape</div>
@@ -669,8 +668,7 @@ function refreshReadout(){
     'tuning <b class="trait">'+(preset.lockTuning?"Slendro 5-TET (locked)":TUNINGS[ti]+" (locked)")+'</b> <span class="note">3rd '+thirdDetune()+'</span> · heartbeat <b class="trait">'+hbName+'</b> <span class="note">50/30/20</span><br>'+
     'melody <b class="trait">'+mel+'</b><br>'+
     'second voice <b class="trait">Fifth above (locked)</b> · loop <b class="trait">'+LOOP_SEC+'s</b> · voice <b class="trait">'+VOICES[eff("voice")]+'</b><br>'+
-    '<span id="now"></span><br>'+
-    '<span class="note">Touring chassis (dot sequencer, flam, heartbeat, filler) + Tonal span · soft bass at chord changes is audition-only</span>';
+    '<span id="now"></span>';
   drawSeq();
 }
 var playBtn=document.getElementById("playBtn");
