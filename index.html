@@ -395,9 +395,16 @@ function draw(ts){
     cx2d.globalAlpha=1; cx2d.fillStyle=d.color;
     cx2d.beginPath(); cx2d.arc(x,y,rad*0.7,0,7); cx2d.fill();
     var since=el-d.flash;
-    if(since<0.7&&since>=0){
-      cx2d.globalAlpha=1-since/0.7; cx2d.strokeStyle=d.color; cx2d.lineWidth=1.5;
-      cx2d.beginPath(); cx2d.arc(x,y,rad+since*44,0,7); cx2d.stroke(); cx2d.globalAlpha=1;
+    if(since>=0){
+      /* ripple train: 3 rings per strike, staggered 0.22s, each
+         expanding and fading over 0.9s, later rings fainter */
+      for(var rp=0;rp<3;rp++){
+        var s2=since-rp*0.22;
+        if(s2<0||s2>=0.9)continue;
+        cx2d.globalAlpha=(1-s2/0.9)*(1-rp*0.25); cx2d.strokeStyle=d.color; cx2d.lineWidth=1.5;
+        cx2d.beginPath(); cx2d.arc(x,y,rad+s2*46,0,7); cx2d.stroke();
+      }
+      cx2d.globalAlpha=1;
     }
   }
   cx2d.fillStyle="rgba(232,228,216,0.5)"; cx2d.font="10px monospace"; cx2d.textAlign="center";
