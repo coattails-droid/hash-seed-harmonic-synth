@@ -27,6 +27,9 @@
   .note { font-size:10px; color:#5a554a; }
   input[type=range] { accent-color:#f5b04c; width:130px;}
   .rlabel { font-size:11px; color:#8a8578; margin-top:9px; letter-spacing:1px;}
+  .vbtn { display:inline-flex; flex-direction:column; align-items:center; gap:4px; }
+  .track { width:64px; height:3px; background:#2a2a2a; border-radius:2px; }
+  .fill { height:3px; background:#f5b04c; border-radius:2px; }
 </style>
 </head>
 <body>
@@ -350,6 +353,17 @@ function draw(ts){
   var el=playing?(ctx.currentTime-t0aud):(performance.now()/1000%LOOP_SEC);
   cx2d.strokeStyle="rgba(255,255,255,0.06)";
   RING_R.forEach(function(rr){cx2d.beginPath();cx2d.arc(CX,CY,rr*R,0,7);cx2d.stroke();});
+  /* loop progress ring: sweeps once per loop, coral tick = vamp change */
+  var fr=((el%LOOP_SEC)+LOOP_SEC)%LOOP_SEC/LOOP_SEC;
+  cx2d.lineWidth=3; cx2d.strokeStyle="rgba(255,255,255,0.07)";
+  cx2d.beginPath(); cx2d.arc(CX,CY,R*0.965,0,7); cx2d.stroke();
+  cx2d.strokeStyle="#f5b04c";
+  cx2d.beginPath(); cx2d.arc(CX,CY,R*0.965,-Math.PI/2,-Math.PI/2+fr*Math.PI*2); cx2d.stroke();
+  var ha=-Math.PI/2+fr*Math.PI*2;
+  cx2d.fillStyle="#f5b04c";
+  cx2d.beginPath(); cx2d.arc(CX+Math.cos(ha)*R*0.965,CY+Math.sin(ha)*R*0.965,3.4,0,7); cx2d.fill();
+  cx2d.strokeStyle="rgba(242,120,92,0.85)"; cx2d.lineWidth=2;
+  cx2d.beginPath(); cx2d.moveTo(CX,CY+R*0.965-6); cx2d.lineTo(CX,CY+R*0.965+6); cx2d.stroke();
   for(var i=0;i<dots.length;i++){
     var d=dots[i], b=0.5+0.5*Math.sin(Math.PI*2*(d.dir*el/d.period+d.phase));
     var x=CX+Math.cos(d.ang)*d.rad*R, y=CY+Math.sin(d.ang)*d.rad*R, rad=2+3*b;
@@ -381,6 +395,108 @@ function mkRow(id,items,cur,fmt,dis){
     el.appendChild(b);
   });
 }
+/* ---- visual builders: the graphic IS the explanation ---- */
+function buildKeyboard(){
+  var el=document.getElementById("rootRow"); el.innerHTML="";
+  var kb=document.createElement("div");
+  kb.style.cssText="position:relative;width:252px;height:58px;";
+  var cur=eff("root");
+  [0,2,4,5,7,9,11].forEach(function(pc,wi){
+    var k=document.createElement("div");
+    k.style.cssText="position:absolute;bottom:0;left:"+(wi*36)+"px;width:34px;height:56px;border-radius:0 0 4px 4px;cursor:pointer;box-sizing:border-box;border:1px solid #3a3a3a;"+
+      "background:"+(pc===cur?"#f5b04c":"#d8d3c4")+";color:"+(pc===cur?"#000":"#55534a")+";font-size:9px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:3px;font-family:monospace;";
+    k.textContent=NAMES_S[pc];
+    k.onclick=function(){pick("rootRow",pc);};
+    kb.appendChild(k);
+  });
+  var afterWhite={1:0,3:1,6:3,8:4,10:5};
+  [1,3,6,8,10].forEach(function(pc){
+    var wi=afterWhite[pc];
+    var k=document.createElement("div");
+    k.style.cssText="position:absolute;top:0;left:"+((wi+1)*36-11)+"px;width:22px;height:34px;border-radius:0 0 3px 3px;cursor:pointer;box-sizing:border-box;border:1px solid #000;z-index:2;"+
+      "background:"+(pc===cur?"#f5b04c":"#161616")+";color:"+(pc===cur?"#000":"#8a8578")+";font-size:7px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:2px;font-family:monospace;";
+    k.textContent=NAMES_S[pc];
+    k.onclick=function(){pick("rootRow",pc);};
+    kb.appendChild(k);
+  });
+  el.appendChild(kb);
+}
+function buildOctRow(){
+  var el=document.getElementById("octRow"); el.innerHTML="";
+  OCTAVES.forEach(function(name,i){
+    var b=document.createElement("button");
+    b.classList.add("vbtn");
+    if(i===eff("oct"))b.classList.add("on");
+    var bars="";
+    for(var j=0;j<3;j++){
+      var h=[7,12,17][j];
+      bars+='<rect x="'+(4+j*9)+'" y="'+(20-h)+'" width="6" height="'+h+'" fill="'+(j<=i?"#f5b04c":"#3a3a3a")+'"/>';
+    }
+    b.innerHTML='<svg width="34" height="22">'+bars+'</svg><div>'+name+'</div>';
+    b.onclick=function(){pick("octRow",i);};
+    el.appendChild(b);
+  });
+}
+function clockSVG(p){
+  var tones=p.iv?p.iv.map(function(s){return s/12;}):p.cents.map(function(c){return c/1200;});
+  var cx=23, cy=23, R=17, s="";
+  var pts=tones.map(function(f){var a=f*Math.PI*2-Math.PI/2;return [cx+Math.cos(a)*R, cy+Math.sin(a)*R];});
+  s+='<circle cx="23" cy="23" r="20" fill="none" stroke="#2a2a2a" stroke-width="1"/>';
+  if(pts.length>2)s+='<polygon points="'+pts.map(function(q){return q[0].toFixed(1)+","+q[1].toFixed(1);}).join(" ")+'" fill="rgba(245,176,76,0.10)" stroke="rgba(245,176,76,0.55)" stroke-width="1"/>';
+  for(var pc=0;pc<12;pc++){var a=pc/12*Math.PI*2-Math.PI/2;
+    s+='<circle cx="'+(cx+Math.cos(a)*R).toFixed(1)+'" cy="'+(cy+Math.sin(a)*R).toFixed(1)+'" r="1.4" fill="#3a3a3a"/>';}
+  pts.forEach(function(q){s+='<circle cx="'+q[0].toFixed(1)+'" cy="'+q[1].toFixed(1)+'" r="2.7" fill="#f5b04c"/>';});
+  return '<svg width="46" height="46">'+s+'</svg>';
+}
+function buildHarmRow(){
+  var el=document.getElementById("harmRow"); el.innerHTML="";
+  PRESETS.forEach(function(p,i){
+    var b=document.createElement("button");
+    b.classList.add("vbtn");
+    if(i===eff("harmony"))b.classList.add("on");
+    b.innerHTML='<div>'+p.n+' <span class="wt">'+p.w+'</span></div>'+clockSVG(p)+
+      '<div class="track"><div class="fill" style="width:'+p.w+'%"></div></div>';
+    b.onclick=function(){pick("harmRow",i);};
+    el.appendChild(b);
+  });
+}
+function buildLoopRow(){
+  var el=document.getElementById("loopRow"); el.innerHTML="";
+  LOOPS.forEach(function(sec,i){
+    var b=document.createElement("button");
+    b.classList.add("vbtn");
+    if(i===eff("loop"))b.classList.add("on");
+    var wpx=Math.round(sec/45*76);
+    b.innerHTML='<div>'+sec+'s</div><div class="track" style="width:76px"><div class="fill" style="width:'+wpx+'px"></div></div>';
+    b.onclick=function(){pick("loopRow",i);};
+    el.appendChild(b);
+  });
+}
+function wavePts(kind){
+  var pts=[], N=44;
+  for(var i=0;i<N;i++){
+    var t=i/(N-1), env, ph;
+    if(kind===0){ env=Math.exp(-3.2*t); ph=Math.sin(t*46)*env; }
+    else{ env=Math.pow(Math.sin(Math.PI*Math.min(1,t*1.04)),1.2); ph=Math.sin(t*30+Math.sin(t*9)*0.7)*env; }
+    pts.push((2+t*60).toFixed(1)+","+(10-ph*8.4).toFixed(1));
+  }
+  return pts.join(" ");
+}
+function buildVoiceRow(){
+  var el=document.getElementById("voiceRow"); el.innerHTML="";
+  VOICES.forEach(function(name,i){
+    var b=document.createElement("button");
+    b.classList.add("vbtn");
+    if(i===eff("voice"))b.classList.add("on");
+    var svg='<svg width="64" height="20">';
+    if(i!==1)svg+='<polyline points="'+wavePts(0)+'" fill="none" stroke="#f5b04c" stroke-width="1.4"/>';
+    if(i!==0)svg+='<polyline points="'+wavePts(1)+'" fill="none" stroke="#f2785c" stroke-width="1.4"/>';
+    svg+='</svg>';
+    b.innerHTML='<div>'+name+'</div>'+svg;
+    b.onclick=function(){pick("voiceRow",i);};
+    el.appendChild(b);
+  });
+}
 var KEYMAP={rootRow:"root",octRow:"oct",harmRow:"harmony",
   pathRow:"path",contourRow:"contour",statesRow:"states",loopRow:"loop",voiceRow:"voice"};
 var VALMAP={states:[3,4,5,6,7,8]};
@@ -391,14 +507,14 @@ function pick(id,i){
   applyState(); syncUI(); refreshReadout();
 }
 function syncUI(){
-  mkRow("rootRow",NAMES_S,eff("root"));
-  mkRow("octRow",OCTAVES,eff("oct"));
-  mkRow("harmRow",PRESETS,eff("harmony"),function(p){return p.n+' <span class="wt">'+p.w+"</span>";});
+  buildKeyboard();
+  buildOctRow();
+  buildHarmRow();
   mkRow("pathRow",PATHS.map(function(p){return p.n;}),eff("path"));
   mkRow("contourRow",CONTOURS,eff("contour"));
   mkRow("statesRow",[3,4,5,6,7,8],eff("states"));
-  mkRow("loopRow",LOOPS.map(function(l){return l+"s";}),eff("loop"));
-  mkRow("voiceRow",VOICES,eff("voice"));
+  buildLoopRow();
+  buildVoiceRow();
 }
 function thirdDetune(){
   if(!preset.iv)return "n/a";
