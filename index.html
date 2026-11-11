@@ -234,8 +234,11 @@ function buildDots(){
     var h=HARMS[Math.floor(rnd()*HARMS.length)];
     var dir=(r%2===0)?1:-1;
     var pk=Math.floor(rnd()*(24/h));   /* first peak lands on this tick */
+    /* Fibonacci sphere: the phyllotaxis spiral wrapped on a ball —
+       even height steps, golden-angle turns */
+    var sy=1-2*(idx+0.5)/99, sr=Math.sqrt(Math.max(0,1-sy*sy)), st=idx*GA;
     dots.push({
-      ang:idx*GA, rad:0.84*Math.sqrt((idx+0.5)/99),
+      px:sr*Math.cos(st), py:sy, pz:sr*Math.sin(st),
       h:h, ph:0.25-dir*pk*h/24, dir:dir,
       oct:ROCT[r],
       color:DOT_COLORS[Math.floor(rnd()*DOT_COLORS.length)], flash:-1e9
@@ -461,26 +464,46 @@ function draw(ts){
   var W=cv.width,H=cv.height,CX=W/2,CY=H/2,R=Math.min(W,H)/2;
   cx2d.fillStyle="#000"; cx2d.fillRect(0,0,W,H);
   var el=playing?(ctx.currentTime-t0aud):(performance.now()/1000%LOOP_SEC);
-  /* faint spiral guide through the dot anchors */
-  cx2d.strokeStyle="rgba(255,255,255,0.05)"; cx2d.lineWidth=1;
-  cx2d.beginPath();
-  for(var gi=0;gi<dots.length;gi++){
-    var gd=dots[gi], gx=CX+Math.cos(gd.ang)*gd.rad*R, gy=CY+Math.sin(gd.ang)*gd.rad*R;
-    if(gi===0)cx2d.moveTo(gx,gy); else cx2d.lineTo(gx,gy);
+  /* The field lives on an invisible sphere (Fibonacci lattice),
+     spinning at 7 deg/s about an axis halfway between its pole and
+     the view axis: the ball rolls clockwise on screen while every
+     dot cycles between the near and far side. Project each dot,
+     thread the spiral by depth, paint far side first. */
+  var spin=-(playing?(ctx.currentTime-t0aud):performance.now()/1000)*0.122173;  /* 7 deg/s */
+  var cf=Math.cos(spin), sf=Math.sin(spin), ct=Math.cos(0.42), stt=Math.sin(0.42), SR=R*0.88;
+  var AY=0.70711, AZ=0.70711;   /* spin axis (0, AY, AZ), unit */
+  var proj=[];
+  for(var pi=0;pi<dots.length;pi++){
+    var pd=dots[pi];
+    var dt=AY*pd.py+AZ*pd.pz;                                  /* axis . p */
+    var cx1=AY*pd.pz-AZ*pd.py, cy1=AZ*pd.px, cz1=-AY*pd.px;    /* axis x p */
+    var rx=pd.px*cf+cx1*sf,
+        ry0=pd.py*cf+cy1*sf+AY*dt*(1-cf),
+        rz0=pd.pz*cf+cz1*sf+AZ*dt*(1-cf);
+    var ry=ry0*ct-rz0*stt, rz2=ry0*stt+rz0*ct;       /* presentation tilt about X */
+    proj.push({i:pi, x:CX+rx*SR, y:CY-ry*SR, z:rz2});
   }
-  cx2d.stroke();
+  cx2d.lineWidth=1;
+  for(var gi=1;gi<proj.length;gi++){
+    var gz=(proj[gi-1].z+proj[gi].z)/2;
+    cx2d.strokeStyle="rgba(255,255,255,"+(0.012+0.05*(gz*0.5+0.5)).toFixed(3)+")";
+    cx2d.beginPath(); cx2d.moveTo(proj[gi-1].x,proj[gi-1].y); cx2d.lineTo(proj[gi].x,proj[gi].y); cx2d.stroke();
+  }
+  var order=proj.slice().sort(function(a,b2){return a.z-b2.z;});
   var curLp=Math.floor(el/LOOP_SEC);
-  for(var i=0;i<dots.length;i++){
+  for(var oi=0;oi<order.length;oi++){
+    var pr=order[oi], i=pr.i;
     var d=dots[i], b=dotBright(d,el);
+    var dScale=0.55+0.45*(pr.z*0.5+0.5), dAlpha=0.30+0.70*(pr.z*0.5+0.5);
     /* wiggle: tiny circle at the dot's own harmonic rate, phase-locked
        to its blink — it is at the top of its sway at every peak */
     var wp=Math.PI*2*(d.dir*el/LOOP_SEC*d.h+d.ph);
-    var x=CX+Math.cos(d.ang)*d.rad*R+Math.cos(wp)*3.5,
-        y=CY+Math.sin(d.ang)*d.rad*R+Math.sin(wp)*3.5, rad=2+3*b;
-    cx2d.globalAlpha=0.25+0.75*b;
+    var x=pr.x+Math.cos(wp)*3.5,
+        y=pr.y+Math.sin(wp)*3.5, rad=(2+3*b)*dScale;
+    cx2d.globalAlpha=(0.25+0.75*b)*dAlpha;
     var gs=rad*6;
     cx2d.drawImage(glowSprite(d.color),x-gs/2,y-gs/2,gs,gs);
-    cx2d.globalAlpha=1; cx2d.fillStyle=d.color;
+    cx2d.globalAlpha=dAlpha; cx2d.fillStyle=d.color;
     cx2d.beginPath(); cx2d.arc(x,y,rad*0.7,0,7); cx2d.fill();
     var since=el-d.flash;
     if(since>=0){
@@ -489,8 +512,8 @@ function draw(ts){
       for(var rp=0;rp<3;rp++){
         var s2=since-rp*0.22;
         if(s2<0||s2>=0.9)continue;
-        cx2d.globalAlpha=(1-s2/0.9)*(1-rp*0.25); cx2d.strokeStyle=d.color; cx2d.lineWidth=1.5;
-        cx2d.beginPath(); cx2d.arc(x,y,rad+s2*46,0,7); cx2d.stroke();
+        cx2d.globalAlpha=(1-s2/0.9)*(1-rp*0.25)*dAlpha; cx2d.strokeStyle=d.color; cx2d.lineWidth=1.5;
+        cx2d.beginPath(); cx2d.arc(x,y,rad+s2*46*dScale,0,7); cx2d.stroke();
       }
       cx2d.globalAlpha=1;
     }
@@ -506,7 +529,7 @@ function draw(ts){
       }
     }
     if(coreA>0){
-      cx2d.globalAlpha=coreA; cx2d.fillStyle="#75808f";
+      cx2d.globalAlpha=coreA*dAlpha; cx2d.fillStyle="#75808f";
       cx2d.beginPath(); cx2d.arc(x,y,rad*0.6,0,7); cx2d.fill();
       cx2d.fillStyle="#0b0b0b";
       cx2d.beginPath(); cx2d.arc(x,y,rad*0.6*0.38,0,7); cx2d.fill();
