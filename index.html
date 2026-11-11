@@ -118,7 +118,7 @@ var PRESETS=[
  {n:"Slendro haze",  w:4,  cents:[0,240,480,720,960],names:"slendro 5-TET",   vamp:[0,9], vampN:"I–vi",  flat:false, lockTuning:true}
 ];
 var TUNINGS=["12-TET","5-Limit Just","Pythagorean","¼-Comma Meantone"];
-var CONTOURS=["As-is","Reversed","Flipped"];
+var CONTOURS=["As-is","Reversed"];
 var PATHS=[
  {n:"Arpeggio",       gen:function(N){var s=[];for(var i=0;i<N;i++)s.push(2*i);return s;}},
  {n:"Stepwise Rise",  gen:function(N){var s=[];for(var i=0;i<N;i++)s.push(i);return s;}},
@@ -194,7 +194,7 @@ function dealAll(h){
   for(var i=0;i<PRESETS.length;i++){acc+=PRESETS[i].w;if(x<acc){hi=i;break;}}
   S.harmony=hi;
   S.root=D("root",12); S.oct=D("oct",3);
-  S.path=D("path",6); S.contour=D("contour",3);
+  S.path=D("path",6); S.contour=D("contour",2);
   S.states=3+D("states",6);
   S.loop=D("loop",4);
 }
@@ -212,7 +212,6 @@ function buildSeq(){
   var N=eff("states"),L=curScaleLen();
   var s=PATHS[eff("path")].gen(N,L,ladderIv());
   if(eff("contour")===1)s=s.slice().reverse();
-  if(eff("contour")===2){var a=s[0];s=s.map(function(d){return 2*a-d;});}
   return s;
 }
 function applyState(){
