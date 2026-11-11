@@ -700,9 +700,9 @@ function refreshReadout(){
     'Root <b class="trait">'+nameFor(eff("root"),preset.flat)+'</b> · '+OCTAVES[eff("oct")]+'<br>'+
     'harmony <b class="trait">'+preset.n+'</b> <span class="wt">'+preset.w+'%</span> · scale <b>'+pat+'</b> <span class="note">(at D: '+preset.names+')</span><br>'+
     'vamp <b class="chord">'+vampRootName(0)+' → '+vampRootName(1)+'</b> <span class="note">('+preset.vampN+', half + half)</span><br>'+
-    'tuning <b class="trait">'+(preset.lockTuning?"Slendro 5-TET (locked)":TUNINGS[ti]+" (locked)")+'</b> <span class="note">3rd '+thirdDetune()+'</span> · heartbeat <b class="trait">'+hbName+'</b> <span class="note">50/30/20</span><br>'+
+    'heartbeat <b class="trait">'+hbName+'</b> <span class="note">50/30/20</span><br>'+
     'melody <b class="trait">'+mel+'</b><br>'+
-    'second voice <b class="trait">Fifth above (locked)</b> · loop <b class="trait">'+LOOP_SEC+'s</b> · voice <b class="trait">'+VOICES[eff("voice")]+'</b><br>'+
+    'loop <b class="trait">'+LOOP_SEC+'s</b><br>'+
     '<span id="now"></span>';
   drawSeq();
 }
