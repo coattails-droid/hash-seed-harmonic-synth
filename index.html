@@ -229,9 +229,14 @@ var ctx=null, master, dryBus, fxSend, t0aud=0, tickN=0, timer=0, playing=false;
 function mtof(mf){return 432*Math.pow(2,(mf-69)/12);}
 function initAudio(){
   ctx=new (window.AudioContext||window.webkitAudioContext)();
-  master=ctx.createGain(); master.gain.value=0.9;
-  var cp=ctx.createDynamicsCompressor(); cp.threshold.value=-18; cp.ratio.value=4;
-  master.connect(cp); cp.connect(ctx.destination);
+  /* mastering chain: master -> 24Hz cleanup -> glue comp -> brickwall limiter */
+  master=ctx.createGain(); master.gain.value=0.85;
+  var hp=ctx.createBiquadFilter(); hp.type="highpass"; hp.frequency.value=24; hp.Q.value=0.4;
+  var cp=ctx.createDynamicsCompressor();
+  cp.threshold.value=-18; cp.knee.value=18; cp.ratio.value=3; cp.attack.value=0.012; cp.release.value=0.24;
+  var lim=ctx.createDynamicsCompressor();
+  lim.threshold.value=-2.5; lim.knee.value=0; lim.ratio.value=20; lim.attack.value=0.001; lim.release.value=0.2;
+  master.connect(hp); hp.connect(cp); cp.connect(lim); lim.connect(ctx.destination);
   dryBus=ctx.createGain(); dryBus.gain.value=0.85; dryBus.connect(master);
   fxSend=ctx.createGain(); fxSend.gain.value=1.0; fxSend.connect(master);
   var n=ctx.sampleRate,len=Math.floor(n*1.8),imp=ctx.createBuffer(1,len,n),d=imp.getChannelData(0);
@@ -246,7 +251,7 @@ function pluck(mf,vel,t){  /* production voice, midiFloat in */
   fl.frequency.value=1500+vel*3500;
   var g=ctx.createGain();
   g.gain.setValueAtTime(0.0001,t);
-  g.gain.linearRampToValueAtTime(vel*0.24,t+0.008);
+  g.gain.linearRampToValueAtTime(vel*0.18,t+0.008);
   g.gain.exponentialRampToValueAtTime(0.0001,t+2.8);
   [[1,1.0],[2,0.25],[2.99,0.10]].forEach(function(p){
     var o=ctx.createOscillator(); o.type="sine"; o.frequency.value=f*p[0];
@@ -266,7 +271,7 @@ function throatNote(f,vel,t){
   var g2=ctx.createGain(); g2.gain.value=0.12; o2.connect(g2);
   var g=ctx.createGain();
   g.gain.setValueAtTime(0.0001,t);
-  g.gain.linearRampToValueAtTime(vel*0.20,t+0.18);
+  g.gain.linearRampToValueAtTime(vel*0.17,t+0.18);
   g.gain.setTargetAtTime(0.0001,t+0.18,0.8);
   o.connect(g); g2.connect(g); g.connect(dryBus);
   var se=ctx.createGain(); se.gain.value=0.55; g.connect(se); se.connect(fxSend);
@@ -276,7 +281,7 @@ function voiceStrike(nf,vel,t,flam){
   var v=eff("voice");
   /* Both (v=2): pluck and throat layer on the same strike; the throat
      overtone is trimmed so the stack leaves headroom for the pluck. */
-  if(v===1||v===2)throatNote(nf.f,vel*(v===2?0.75:1),t);
+  if(v===1||v===2)throatNote(nf.f,vel*(v===2?0.85:1),t);
   if(v===0||v===2){ if(flam)pluck(nf.mf,vel,t-0.04); pluck(nf.mf,vel,t); }
 }
 function bassNote(half,t){  /* audition-only soft root at chord change */
@@ -284,7 +289,7 @@ function bassNote(half,t){  /* audition-only soft root at chord change */
   var o=ctx.createOscillator(); o.type="sine"; o.frequency.value=f;
   var g=ctx.createGain();
   g.gain.setValueAtTime(0.0001,t);
-  g.gain.linearRampToValueAtTime(0.12,t+0.3);
+  g.gain.linearRampToValueAtTime(0.10,t+0.3);
   g.gain.exponentialRampToValueAtTime(0.0001,t+3.0);
   o.connect(g); g.connect(dryBus);
   o.start(t); o.stop(t+3.2);
@@ -397,25 +402,34 @@ function mkRow(id,items,cur,fmt,dis){
 }
 /* ---- visual builders: the graphic IS the explanation ---- */
 function buildKeyboard(){
+  /* abstract keyboard: piano geometry kept, rendered in the page theme —
+     dark keys, grey labels, a field dot per key, amber glow on selection */
   var el=document.getElementById("rootRow"); el.innerHTML="";
   var kb=document.createElement("div");
   kb.style.cssText="position:relative;width:252px;height:58px;";
   var cur=eff("root");
+  function keyInner(pc,small){
+    var dc=DOT_COLORS[pc%3], sel=pc===cur;
+    return '<div style="width:'+(small?4:6)+'px;height:'+(small?4:6)+'px;border-radius:50%;background:'+(sel?"#000":dc)+';opacity:'+(sel?0.8:0.55)+'"></div>'+
+           '<div>'+NAMES_S[pc]+'</div>';
+  }
   [0,2,4,5,7,9,11].forEach(function(pc,wi){
-    var k=document.createElement("div");
-    k.style.cssText="position:absolute;bottom:0;left:"+(wi*36)+"px;width:34px;height:56px;border-radius:0 0 4px 4px;cursor:pointer;box-sizing:border-box;border:1px solid #3a3a3a;"+
-      "background:"+(pc===cur?"#f5b04c":"#d8d3c4")+";color:"+(pc===cur?"#000":"#55534a")+";font-size:9px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:3px;font-family:monospace;";
-    k.textContent=NAMES_S[pc];
+    var k=document.createElement("div"), sel=pc===cur;
+    k.style.cssText="position:absolute;bottom:0;left:"+(wi*36+1)+"px;width:33px;height:56px;border-radius:6px;cursor:pointer;box-sizing:border-box;"+
+      "border:1px solid "+(sel?"#f5b04c":"#3a3a3a")+";background:"+(sel?"#f5b04c":"#1a1a1a")+";color:"+(sel?"#000":"#8a8578")+";"+
+      "box-shadow:"+(sel?"0 0 14px rgba(245,176,76,0.45)":"none")+";font-size:9px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:5px 0 3px;font-family:monospace;";
+    k.innerHTML=keyInner(pc,false);
     k.onclick=function(){pick("rootRow",pc);};
     kb.appendChild(k);
   });
   var afterWhite={1:0,3:1,6:3,8:4,10:5};
   [1,3,6,8,10].forEach(function(pc){
-    var wi=afterWhite[pc];
+    var wi=afterWhite[pc], sel=pc===cur;
     var k=document.createElement("div");
-    k.style.cssText="position:absolute;top:0;left:"+((wi+1)*36-11)+"px;width:22px;height:34px;border-radius:0 0 3px 3px;cursor:pointer;box-sizing:border-box;border:1px solid #000;z-index:2;"+
-      "background:"+(pc===cur?"#f5b04c":"#161616")+";color:"+(pc===cur?"#000":"#8a8578")+";font-size:7px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:2px;font-family:monospace;";
-    k.textContent=NAMES_S[pc];
+    k.style.cssText="position:absolute;top:0;left:"+((wi+1)*36-11)+"px;width:22px;height:34px;border-radius:5px;cursor:pointer;box-sizing:border-box;z-index:2;"+
+      "border:1px solid "+(sel?"#f5b04c":"#3a3a3a")+";background:"+(sel?"#f5b04c":"#0a0a0a")+";color:"+(sel?"#000":"#8a8578")+";"+
+      "box-shadow:"+(sel?"0 0 12px rgba(245,176,76,0.5)":"none")+";font-size:7px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:4px 0 2px;font-family:monospace;";
+    k.innerHTML=keyInner(pc,true);
     k.onclick=function(){pick("rootRow",pc);};
     kb.appendChild(k);
   });
