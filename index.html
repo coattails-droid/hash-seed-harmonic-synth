@@ -26,7 +26,7 @@
   .trait { color:#f5b04c; }
   .note { font-size:10px; color:#5a554a; }
   input[type=range] { accent-color:#f5b04c; width:130px;}
-  .rlabel { font-size:11px; color:#8a8578; }
+  .rlabel { font-size:11px; color:#8a8578; margin-top:9px; letter-spacing:1px;}
 </style>
 </head>
 <body>
@@ -42,9 +42,14 @@
 <div class="sec">HARMONY — Touring presets, hash slice 00–99, weighted</div>
 <div class="row" id="harmRow"></div>
 <div class="sec">MELODY — INTERVAL PATH</div>
+<div class="note" style="max-width:620px;text-align:center;line-height:1.6">The dots only decide <b>when</b> a note plays. These buttons decide <b>which</b> notes, in order:<br>pick a pattern, a shape, and how many notes it has. The picture is the melody, left to right.</div>
+<div class="rlabel">pattern</div>
 <div class="row" id="pathRow"></div>
+<div class="rlabel">shape</div>
 <div class="row" id="contourRow"></div>
+<div class="rlabel">notes in the pattern</div>
 <div class="row" id="statesRow"></div>
+<canvas id="seqCv" width="360" height="80" style="margin-top:8px"></canvas>
 
 <div class="sec">LOOP</div>
 <div class="row" id="loopRow"></div>
@@ -89,7 +94,7 @@ var PRESETS=[
  {n:"Slendro haze",  w:4,  cents:[0,240,480,720,960],names:"slendro 5-TET",   vamp:[0,9], vampN:"I–vi",  flat:false, lockTuning:true}
 ];
 var TUNINGS=["12-TET","5-Limit Just","Pythagorean","¼-Comma Meantone"];
-var CONTOURS=["Prime","Retrograde","Inversion"];
+var CONTOURS=["As-is","Reversed","Flipped"];
 var PATHS=[
  {n:"Arpeggio",       gen:function(N){var s=[];for(var i=0;i<N;i++)s.push(2*i);return s;}},
  {n:"Stepwise Rise",  gen:function(N){var s=[];for(var i=0;i<N;i++)s.push(i);return s;}},
@@ -400,10 +405,29 @@ function thirdDetune(){
   var c=tuneCents(eff("tune"),preset.iv[2],eff("root"));
   return (c>=0?"+":"")+c.toFixed(1)+"¢";
 }
+function drawSeq(){
+  var c=document.getElementById("seqCv"); if(!c||!seq.length)return;
+  var g=c.getContext("2d"), W=c.width, H=c.height;
+  g.fillStyle="#000"; g.fillRect(0,0,W,H);
+  var mn=Math.min.apply(null,seq), mx=Math.max.apply(null,seq), rg=Math.max(1,mx-mn);
+  var pad=16, iw=W-2*pad, ih=H-2*pad-6;
+  function pt(d,i){
+    return [pad+(seq.length===1?iw/2:iw*i/(seq.length-1)), pad+ih*(1-(d-mn)/rg)];
+  }
+  g.strokeStyle="rgba(245,176,76,0.55)"; g.lineWidth=1.5; g.beginPath();
+  seq.forEach(function(d,i){ var p=pt(d,i); if(i===0)g.moveTo(p[0],p[1]); else g.lineTo(p[0],p[1]); });
+  g.stroke();
+  seq.forEach(function(d,i){
+    var p=pt(d,i);
+    g.fillStyle="#f5b04c"; g.beginPath(); g.arc(p[0],p[1],4,0,7); g.fill();
+    g.fillStyle="rgba(232,228,216,0.65)"; g.font="9px monospace"; g.textAlign="center";
+    g.fillText(d,p[0],p[1]-8);
+  });
+}
 function refreshReadout(){
   var manual=Object.keys(MAN).length>0, ti=eff("tune");
   var pat=preset.iv?preset.iv.join(" "):preset.cents.join("¢ ")+"¢";
-  var mel=PATHS[eff("path")].n+" · "+CONTOURS[eff("contour")]+" · "+eff("states")+" states <span class='note'>["+seq.join(" ")+"]</span>";
+  var mel=PATHS[eff("path")].n+" · "+CONTOURS[eff("contour")]+" · "+eff("states")+" notes <span class='note'>["+seq.join(" ")+"]</span>";
   document.getElementById("readout").innerHTML=
     'token <b>'+hash.slice(0,12)+'…</b> '+(manual?'<span class="note">(manual override)</span>':'<span class="note">(hash-dealt)</span>')+'<br>'+
     'Root <b class="trait">'+nameFor(eff("root"),preset.flat)+'</b> · '+OCTAVES[eff("oct")]+'<br>'+
@@ -414,6 +438,7 @@ function refreshReadout(){
     'second voice <b class="trait">Fifth above (locked)</b> · loop <b class="trait">'+LOOP_SEC+'s</b> · voice <b class="trait">'+VOICES[eff("voice")]+'</b><br>'+
     '<span id="now"></span><br>'+
     '<span class="note">Touring chassis (dot sequencer, flam, heartbeat, filler) + Tonal span · soft bass at chord changes is audition-only</span>';
+  drawSeq();
 }
 var playBtn=document.getElementById("playBtn");
 playBtn.onclick=function(){
