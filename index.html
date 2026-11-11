@@ -248,31 +248,6 @@ function pluck(mf,vel,t){  /* production voice, midiFloat in */
   fl.connect(g); g.connect(dryBus);
   var s=ctx.createGain(); s.gain.value=0.6; g.connect(s); s.connect(fxSend);
 }
-var droneNodes=null;
-function droneStart(){
-  droneStop();
-  var f=mtof(baseMidi()), t=ctx.currentTime;
-  var g=ctx.createGain(); g.gain.value=0.0001;
-  g.gain.linearRampToValueAtTime(0.05,t+2.0);
-  var lfo=ctx.createOscillator(); lfo.frequency.value=0.33;
-  var lg=ctx.createGain(); lg.gain.value=0.011; lfo.connect(lg); lg.connect(g.gain);
-  var fl=ctx.createBiquadFilter(); fl.type="lowpass"; fl.frequency.value=320;
-  var oscs=[];
-  [[1,"sine",1],[2.004,"triangle",0.22],[0.5,"sine",0.35]].forEach(function(p){
-    var o=ctx.createOscillator(); o.type=p[1]; o.frequency.value=f*p[0];
-    var og=ctx.createGain(); og.gain.value=p[2]; o.connect(og); og.connect(g); o.start(t); oscs.push(o);
-  });
-  g.connect(fl); fl.connect(dryBus);
-  var se=ctx.createGain(); se.gain.value=0.45; fl.connect(se); se.connect(fxSend);
-  lfo.start(t);
-  droneNodes={g:g,lfo:lfo,oscs:oscs};
-}
-function droneStop(){
-  if(!droneNodes)return;
-  var t=ctx.currentTime, dn=droneNodes; droneNodes=null;
-  try{ dn.g.gain.setTargetAtTime(0.0001,t,0.4);
-    dn.lfo.stop(t+2); dn.oscs.forEach(function(o){o.stop(t+2);}); }catch(e){}
-}
 function throatNote(f,vel,t){
   var o=ctx.createOscillator(); o.type="sine";
   o.frequency.setValueAtTime(f*0.965,t);
@@ -408,8 +383,6 @@ function pick(id,i){
   var k=KEYMAP[id];
   MAN[k]=VALMAP[k]?VALMAP[k][i]:i;
   if(k==="harmony")buildDots();
-  if(k==="voice"&&playing){ if(eff("voice")>=1)droneStart(); else droneStop(); }
-  if((k==="root"||k==="oct")&&playing&&eff("voice")>=1)droneStart();
   applyState(); syncUI(); refreshReadout();
 }
 function syncUI(){
@@ -450,17 +423,14 @@ playBtn.onclick=function(){
   if(playing){
     applyState();
     t0aud=ctx.currentTime+0.1; tickN=0; pathPtr=0; strikeCount=0;
-    if(eff("voice")>=1)droneStart();
     playBtn.textContent="⏸ STOP"; playBtn.classList.add("playing");
     timer=setTimeout(pump,50);
   }else{ playBtn.textContent="▶ PLAY"; playBtn.classList.remove("playing");
-    droneStop();
     if(timer){clearTimeout(timer);timer=0;} }
 };
 document.getElementById("newBtn").onclick=function(){
   hash=randHash(); MAN={}; dealAll(hash);
   buildDots(); applyState(); syncUI(); refreshReadout();
-  if(playing&&eff("voice")>=1)droneStart();
 };
 
 dealAll(hash);
