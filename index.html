@@ -342,7 +342,11 @@ function scheduleTick(t,li){
   for(var i=0;i<dots.length;i++){
     var d=dots[i];
     var b=dotBright(d,el);
-    if(b>0.88)cand.push({i:i,b:b});
+    /* tiny hash tiebreak (+<0.005): ~24 dots peak simultaneously on the
+       harmonic grid, and a plain sort resolves that tie in index order —
+       inner rings first, outer rings never. Genuinely brighter dots
+       still win; equals now rotate fairly, per token and tick. */
+    if(b>0.88)cand.push({i:i,b:b+(cyrb53(hash+"tie"+li+"_"+i)%1000)/1000*0.005});
   }
   cand.sort(function(a,b){return b.b-a.b;});
   var sw=((li*hbK)%1)<0.2?2.2:0.7;
