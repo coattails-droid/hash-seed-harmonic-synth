@@ -124,7 +124,13 @@ var PATHS=[
  {n:"Stepwise Rise",  gen:function(N){var s=[];for(var i=0;i<N;i++)s.push(i);return s;}},
  {n:"Stepwise Fall",  gen:function(N){var s=[];for(var i=0;i<N;i++)s.push(N-1-i);return s;}},
  {n:"Pedal Tone",     gen:function(N){var s=[];for(var i=0;i<N;i++)s.push(i%2===0?0:(i+1)/2);return s;}},
- {n:"Fifths Ladder",  gen:function(N,L,iv){var s=[];for(var i=0;i<N;i++)s.push(nearestDeg(7*i,L,iv));return s;}}
+ {n:"Fifths Ladder",  gen:function(N,L,iv){var s=[];for(var i=0;i<N;i++)s.push(nearestDeg(7*i,L,iv));return s;}},
+ {n:"Valley",         gen:function(N){var s=[];for(var i=0;i<N;i++)s.push(Math.abs(N-1-2*i));return s;}},
+ {n:"Wave",           gen:function(N){var s=[];for(var i=0;i<N;i++)s.push(Math.round(2+2*Math.sin(2*Math.PI*i/N)));return s;}},
+ {n:"Zigzag",         gen:function(N){var s=[];for(var i=0;i<N;i++)s.push(i%2===0?i/2:3+(i-1)/2);return s;}},
+ {n:"Plateau",        gen:function(N){var s=[];for(var i=0;i<N;i++)s.push(Math.floor(i/2));return s;}},
+ {n:"Expander",       gen:function(N){var s=[];for(var i=0;i<N;i++)s.push(i*(i+1)/2);return s;}},
+ {n:"Random Walk",    gen:function(N){var rnd=mulberry32(xmur3(hash+"walk")()),s=[],d=2;for(var i=0;i<N;i++){s.push(d);d=Math.max(0,d+(rnd()<0.5?-1:1)*(rnd()<0.3?2:1));}return s;}}
 ];
 function nearestDeg(semi,L,iv){
   var best=0,bd=1e9;
@@ -193,7 +199,7 @@ function dealAll(h){
   for(var i=0;i<PRESETS.length;i++){acc+=PRESETS[i].w;if(x<acc){hi=i;break;}}
   S.harmony=hi;
   S.root=D("root",12); S.oct=D("oct",3);
-  S.path=D("path",5); S.contour=D("contour",2);
+  S.path=D("path",11); S.contour=D("contour",2);
   S.states=3+D("states",6);
   S.loop=D("loop",4);
 }
@@ -666,10 +672,14 @@ function drawSeq(){
   var c=document.getElementById("seqCv"); if(!c||!seq.length)return;
   var g=c.getContext("2d"), W=c.width, H=c.height;
   g.fillStyle="#000"; g.fillRect(0,0,W,H);
-  var mn=Math.min.apply(null,seq), mx=Math.max.apply(null,seq), rg=Math.max(1,mx-mn);
+  /* one fixed frame shared by every pattern at this note count —
+     the tallest pattern sets the top — so the drawing shows each
+     melody's true steepness instead of stretching it to fill the box */
+  var N2=eff("states"), L2=curScaleLen(), gmax=1;
+  PATHS.forEach(function(p){ var gs2=p.gen(N2,L2,ladderIv()); for(var gi=0;gi<gs2.length;gi++)if(gs2[gi]>gmax)gmax=gs2[gi]; });
   var pad=16, iw=W-2*pad, ih=H-2*pad-6;
   function pt(d,i){
-    return [pad+(seq.length===1?iw/2:iw*i/(seq.length-1)), pad+ih*(1-(d-mn)/rg)];
+    return [pad+(seq.length===1?iw/2:iw*i/(seq.length-1)), pad+ih*(1-d/gmax)];
   }
   g.strokeStyle=hexA("#00f0ff",0.55); g.lineWidth=1.5; g.beginPath();
   seq.forEach(function(d,i){ var p=pt(d,i); if(i===0)g.moveTo(p[0],p[1]); else g.lineTo(p[0],p[1]); });
