@@ -138,7 +138,8 @@ var OCTAVES=["C3","C4","C5"];
 var NAMES_S=["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
 var NAMES_F=["C","Db","D","Eb","E","F","Gb","G","Ab","A","Bb","B"];
 var RING_N=[12,33,33,21], RING_R=[0.17,0.40,0.60,0.82], ROCT=[0,1,1,2];
-var DOT_COLORS=["#ffb347","#ff7f50","#ff4d3d"];
+/* Tidal Geometries' six neon dot colors — the accent field, fixed across that series */
+var DOT_COLORS=["#b6ff00","#00ff66","#00f0ff","#2e6bff","#8b2bff","#ff2bd6"];
 
 /* ---------- tuning: root-relative, degrees spelled per root ----------
    Each scale degree keeps its letter (from the preset's note names), so
@@ -224,7 +225,7 @@ function buildDots(){
       ang:idx*GA, rad:0.84*Math.sqrt((idx+0.5)/99),
       h:h, ph:0.25-dir*pk*h/24, dir:dir,
       oct:ROCT[r],
-      color:DOT_COLORS[Math.floor(rnd()*3)], flash:-1e9
+      color:DOT_COLORS[Math.floor(rnd()*DOT_COLORS.length)], flash:-1e9
     });
     idx++;
   }
@@ -451,7 +452,7 @@ function buildKeyboard(){
   kb.style.cssText="position:relative;width:252px;height:58px;";
   var cur=eff("root");
   function keyInner(pc,small){
-    var dc=DOT_COLORS[pc%3], sel=pc===cur;
+    var dc=DOT_COLORS[pc%DOT_COLORS.length], sel=pc===cur;
     return '<div style="width:'+(small?4:6)+'px;height:'+(small?4:6)+'px;border-radius:50%;background:'+(sel?"#000":dc)+';opacity:'+(sel?0.8:0.55)+'"></div>'+
            '<div>'+NAMES_S[pc]+'</div>';
   }
