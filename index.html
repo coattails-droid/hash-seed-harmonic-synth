@@ -69,10 +69,12 @@
 "use strict";
 /* ============================================================
    MERGED AUDITION — Touring chassis + Tonal option span
-   Chassis (harmony-audition): 99-dot sine-blink sequencer, top-2
-   strikes per tick, production pluck + 40ms flam + heartbeat swell
-   + climbing filler, 24 ticks per loop, harmony presets (weighted)
-   x tuning, 2-chord vamp (change on tick 12), audition bass.
+   Chassis: 99-dot sequencer — every dot blinks at an integer
+   harmonic of the loop frequency (h in {2,3,4,6,8,12}, dealt
+   freely per dot), peaks phase-locked to the 24-tick grid, top-2
+   strikes per tick, production pluck + 40ms flam + heartbeat
+   swell + path filler, harmony presets (weighted), 2-chord vamp
+   (change on tick 12), audition bass.
    Folded in (tonal-audition): Interval Path + Contour + States as
    the melody source (dots trigger, path orders the pitches), Second
    Voice locked to Fifth above, Loop 27/36/45/54s, Root (12),
@@ -189,18 +191,27 @@ function applyState(){
   LOOP_SEC=LOOPS[eff("loop")]; STEP=LOOP_SEC/24;
   seq=buildSeq(); pathPtr=0;
 }
+var HARMS=[2,3,4,6,8,12];
 function buildDots(){
   var rnd=mulberry32(xmur3(hash)()), idx=0;
   dots=[];
   for(var r=0;r<4;r++)for(var i=0;i<RING_N[r];i++){
+    var h=HARMS[Math.floor(rnd()*HARMS.length)];
+    var dir=(r%2===0)?1:-1;
+    var pk=Math.floor(rnd()*(24/h));   /* first peak lands on this tick */
     dots.push({
       ang:(i/RING_N[r])*Math.PI*2+rnd()*0.3, rad:RING_R[r],
-      period:2+rnd()*2.5, phase:rnd(), dir:(r%2===0)?1:-1,
+      h:h, ph:0.25-dir*pk*h/24, dir:dir,
       oct:ROCT[r],
       color:DOT_COLORS[Math.floor(rnd()*3)], flash:-1e9
     });
     idx++;
   }
+}
+/* dot brightness: blink frequency = h x loop frequency, peaks on ticks */
+function dotBright(d,el){
+  var u=el/STEP*d.h/24;
+  return 0.5+0.5*Math.sin(Math.PI*2*(d.dir*u+d.ph));
 }
 function degToSemi(deg,iv){
   var L=iv.length,o=Math.floor(deg/L),d=((deg%L)+L)%L;
@@ -316,7 +327,7 @@ function scheduleTick(t,li){
   var el=t-t0aud, cand=[];
   for(var i=0;i<dots.length;i++){
     var d=dots[i];
-    var b=0.5+0.5*Math.sin(Math.PI*2*(d.dir*el/d.period+d.phase));
+    var b=dotBright(d,el);
     if(b>0.88)cand.push({i:i,b:b});
   }
   cand.sort(function(a,b){return b.b-a.b;});
@@ -369,7 +380,7 @@ function draw(ts){
   cx2d.strokeStyle="rgba(242,120,92,0.85)"; cx2d.lineWidth=2;
   cx2d.beginPath(); cx2d.moveTo(CX,CY+R*0.965-6); cx2d.lineTo(CX,CY+R*0.965+6); cx2d.stroke();
   for(var i=0;i<dots.length;i++){
-    var d=dots[i], b=0.5+0.5*Math.sin(Math.PI*2*(d.dir*el/d.period+d.phase));
+    var d=dots[i], b=dotBright(d,el);
     var x=CX+Math.cos(d.ang)*d.rad*R, y=CY+Math.sin(d.ang)*d.rad*R, rad=2+3*b;
     cx2d.globalAlpha=0.25+0.75*b;
     var gs=rad*6;
