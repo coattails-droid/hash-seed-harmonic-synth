@@ -652,7 +652,7 @@ function syncUI(){
   buildHarmRow();
   mkRow("pathRow",PATHS.map(function(p){return p.n;}),eff("path"));
   mkRow("contourRow",CONTOURS,eff("contour"));
-  mkRow("statesRow",[3,4,5,6,7,8],eff("states"));
+  mkRow("statesRow",[3,4,5,6,7,8],eff("states")-3);
   buildLoopRow();
 }
 function thirdDetune(){
