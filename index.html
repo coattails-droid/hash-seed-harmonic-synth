@@ -15,7 +15,7 @@
 <style>
   body { background:#000; color:#e8e4d8; font-family:monospace; margin:0;
          display:flex; flex-direction:column; align-items:center; min-height:100vh; }
-  h1 { font-size:15px; letter-spacing:3px; margin:22px 0 4px; font-weight:normal;
+  h1 { font-size:24px; letter-spacing:4px; margin:22px 0 4px; font-weight:normal;
        background:linear-gradient(90deg,#b6ff00,#00ff66,#00f0ff,#2e6bff,#8b2bff,#ff2bd6);
        -webkit-background-clip:text; background-clip:text; color:transparent; }
   .credit { font-size:12.5px; color:#b8b2a4; text-align:center; margin:0 0 6px; letter-spacing:0.4px;}
@@ -494,7 +494,7 @@ function draw(ts){
   cx2d.lineWidth=1;
   for(var gi=1;gi<proj.length;gi++){
     var gz=(proj[gi-1].z+proj[gi].z)/2;
-    cx2d.strokeStyle="rgba(255,255,255,"+(0.03+0.08*(gz*0.5+0.5)).toFixed(3)+")";
+    cx2d.strokeStyle="rgba(255,255,255,"+(0.05+0.13*(gz*0.5+0.5)).toFixed(3)+")";
     cx2d.beginPath(); cx2d.moveTo(proj[gi-1].x,proj[gi-1].y); cx2d.lineTo(proj[gi].x,proj[gi].y); cx2d.stroke();
   }
   var order=proj.slice().sort(function(a,b2){return a.z-b2.z;});
