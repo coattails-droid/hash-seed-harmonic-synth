@@ -41,6 +41,7 @@
   .vbtn { display:inline-flex; flex-direction:column; align-items:center; gap:4px; }
   .track { width:64px; height:3px; background:#2a2a2a; border-radius:2px; }
   .fill { height:3px; background:#00f0ff; border-radius:2px; }
+  select { background:#1a1a1a; color:#e8e4d8; border:1px solid #3a3a3a; border-radius:6px; font-family:monospace; font-size:12px; padding:8px; }
 </style>
 </head>
 <body>
@@ -51,6 +52,11 @@
 <div class="row" style="margin-top:10px">
   <button id="playBtn" class="big">▶ PLAY</button>
   <button id="newBtn" class="big">🎲 NEW TOKEN</button>
+</div>
+<div class="row" style="margin-top:0">
+  <button id="midiBtn">🎹 ENABLE MIDI OUT</button>
+  <select id="midiSel" style="display:none"></select>
+  <span class="note" id="midiStatus">live note stream for a DAW — pitch bend carries the Pythagorean spelling + A=432 offset</span>
 </div>
 <div class="readout" id="readout"></div>
 <canvas id="cv" width="480" height="480"></canvas>
@@ -265,6 +271,47 @@ function vampRootName(half){return nameFor(eff("root")+preset.vamp[half],preset.
 /* ---------- synth ---------- */
 var ctx=null, master, dryBus, fxSend, t0aud=0, tickN=0, timer=0, playing=false;
 function mtof(mf){return 432*Math.pow(2,(mf-69)/12);}
+
+/* ---------- MIDI out (Web MIDI) ----------
+   Notes stream live: ch 1 main voice, ch 2 fifth-above, ch 3 bass.
+   Pitch bend per note carries the spelled cents offset plus the
+   A=432 concert offset (-31.77c vs A=440), inside the standard
+   +/-200c bend range. Flam exports as a 45ms grace note; note-off
+   gate is one tick (bass 3s). */
+var midiAccess=null, midiOut=null;
+function midiStatus(txt){ var el=document.getElementById("midiStatus"); if(el)el.textContent=txt; }
+function midiWhen(t){ return performance.now()+(t-ctx.currentTime)*1000; }
+function midiNote(mf,vel,t,gate,ch){
+  if(!midiOut||mf===null||mf===undefined)return;
+  var note=Math.round(mf); if(note<0||note>127)return;
+  var bend=Math.round(8192+(((mf-note)*100-31.77)/200)*8192);
+  bend=Math.max(0,Math.min(16383,bend));
+  var w=midiWhen(t);
+  try{
+    midiOut.send([0xE0|ch, bend&0x7F, (bend>>7)&0x7F], w);
+    midiOut.send([0x90|ch, note, Math.max(1,Math.min(127,Math.round(vel*127)))], w);
+    midiOut.send([0x80|ch, note, 0], w+gate*1000);
+  }catch(e){}
+}
+function setMIDIOut(o){ midiOut=o; if(o)midiStatus("MIDI out: sending to "+(o.name||o.id)+" — ch 1 main · ch 2 fifth · ch 3 bass"); }
+function refreshMIDIList(){
+  var sel=document.getElementById("midiSel"); if(!sel||!midiAccess)return;
+  sel.innerHTML="";
+  var outs=[]; midiAccess.outputs.forEach(function(o){ outs.push(o); });
+  if(!outs.length){ sel.style.display="none"; midiOut=null; midiStatus("MIDI out: no outputs found (connect an interface or virtual port, e.g. IAC / loopMIDI)"); return; }
+  outs.forEach(function(o){ var op=document.createElement("option"); op.value=o.id; op.textContent=o.name||o.id; sel.appendChild(op); });
+  sel.style.display="";
+  setMIDIOut(outs[0]);
+  sel.onchange=function(){ midiAccess.outputs.forEach(function(o){ if(o.id===sel.value)setMIDIOut(o); }); };
+}
+function setupMIDI(){
+  if(!navigator.requestMIDIAccess){ midiStatus("MIDI out: Web MIDI is not supported in this browser — use Chrome or Edge"); return; }
+  navigator.requestMIDIAccess().then(function(acc){
+    midiAccess=acc; acc.onstatechange=refreshMIDIList; refreshMIDIList();
+    document.getElementById("midiBtn").textContent="🎹 MIDI OUT ON";
+  }, function(){ midiStatus("MIDI out: access denied"); });
+}
+document.getElementById("midiBtn").onclick=setupMIDI;
 function initAudio(){
   ctx=new (window.AudioContext||window.webkitAudioContext)();
   /* mastering chain: master -> 24Hz cleanup -> glue comp -> brickwall limiter */
@@ -326,6 +373,7 @@ function bassNote(half,t){  /* audition-only soft root at chord change */
   var vr=preset.vamp[half], bc=0;
   if(!preset.cents)bc=degCents(eff("tune"),preset.letOff[preset.iv.indexOf(vr)],vr);
   var f=mtof(baseMidi()+vr+bc/100);
+  midiNote(baseMidi()+vr+bc/100,0.55,t,3.0,2);
   var o=ctx.createOscillator(); o.type="sine"; o.frequency.value=f;
   var g=ctx.createGain();
   g.gain.setValueAtTime(0.0001,t);
@@ -342,8 +390,10 @@ function doStrike(dotIdx,vel,t,half,degOv){
   var deg=(degOv!==undefined)?degOv:nextDeg();
   var nf=noteFreq(deg,d.oct,half);
   voiceStrike(nf,vel,t,true);
+  midiNote(nf.mf,vel,t-0.04,0.045,0); midiNote(nf.mf,vel,t,STEP,0);
   var nf2=noteFreq(SECONDS_T[2].f(deg,strikeCount),d.oct,half);  /* second voice: Fifth above, locked */
   voiceStrike(nf2,vel*0.6,t,true);
+  midiNote(nf2.mf,vel*0.6,t-0.04,0.045,1); midiNote(nf2.mf,vel*0.6,t,STEP,1);
   strikeCount++;
   d.flash=t-t0aud;
 }
