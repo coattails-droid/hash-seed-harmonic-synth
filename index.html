@@ -129,7 +129,7 @@ var SECONDS_T=[
  {n:"Third below",  f:function(d,j){return d-2;}},
  {n:"Alternate",    f:function(d,j){return j%2===0?d+2:d-1;}}
 ];
-var VOICES=["Pluck","Monastery Bell","Throat Song"];
+var VOICES=["Pluck","Monastery Bell","Throat Song","All three"];
 var LOOPS=[16,27,36,45,54];
 var OCTAVES=["C3","C4","C5"];
 var NAMES_S=["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
@@ -159,7 +159,7 @@ function tuneCents(ti,semiFromRoot,rootPc){
 /* ---------- state ---------- */
 var hash=randHash();
 var S={harmony:0,tune:0,mode:0,root:2,oct:1,melody:0,path:0,contour:0,states:5,
-       second:0,beatOn:0,pulses:6,bsteps:16,rot:0,loop:0,voice:0};
+       second:0,beatOn:0,pulses:6,bsteps:16,rot:0,loop:0,voice:3};
 var MAN={};
 function eff(k){return MAN[k]!==undefined?MAN[k]:S[k];}
 function dealAll(h){
@@ -357,10 +357,14 @@ function throatNote(f,vel,t){
 }
 function voiceStrike(nf,vel,t,flam){
   var v=eff("voice");
-  if(v===1){ bellVoice(nf.f,vel,t); return; }
-  if(v===2){ throatNote(nf.f,vel,t); return; }
-  if(nf.mf!==null){ if(flam)pluck(nf.mf,vel,t-0.04); pluck(nf.mf,vel,t); }
-  else sinePluck(nf.f,vel,t);
+  /* All three (v=3): every voice layers on the same strike; bell and
+     throat are trimmed so the stack leaves headroom for the pluck. */
+  if(v===1||v===3)bellVoice(nf.f,vel*(v===3?0.7:1),t);
+  if(v===2||v===3)throatNote(nf.f,vel*(v===3?0.75:1),t);
+  if(v===0||v===3){
+    if(nf.mf!==null){ if(flam)pluck(nf.mf,vel,t-0.04); pluck(nf.mf,vel,t); }
+    else sinePluck(nf.f,vel,t);
+  }
 }
 function bassNote(half,t){  /* audition-only soft root at chord change */
   var f=mtof(baseMidi()+preset.vamp[half]);
@@ -495,8 +499,8 @@ function pick(id,i){
   if(k==="bsteps"){ var sl=document.getElementById("rotSlider"); sl.max=MAN.bsteps-1;
     if(eff("rot")>=MAN.bsteps){MAN.rot=0; sl.value=0; document.getElementById("rotVal").textContent="0";} }
   if(k==="harmony"||k==="mode")buildDots();
-  if(k==="voice"&&playing){ if(eff("voice")===2)droneStart(); else droneStop(); }
-  if((k==="root"||k==="oct")&&playing&&eff("voice")===2)droneStart();
+  if(k==="voice"&&playing){ if(eff("voice")>=2)droneStart(); else droneStop(); }
+  if((k==="root"||k==="oct")&&playing&&eff("voice")>=2)droneStart();
   applyState(); syncUI(); refreshReadout();
 }
 function tuneLocked(){ return eff("mode")===1||preset.lockTuning; }
@@ -555,7 +559,7 @@ playBtn.onclick=function(){
   if(playing){
     applyState();
     t0aud=ctx.currentTime+0.1; tickN=0; pathPtr=0; strikeCount=0;
-    if(eff("voice")===2)droneStart();
+    if(eff("voice")>=2)droneStart();
     playBtn.textContent="⏸ STOP"; playBtn.classList.add("playing");
     timer=setTimeout(pump,50);
   }else{ playBtn.textContent="▶ PLAY"; playBtn.classList.remove("playing");
@@ -566,7 +570,7 @@ document.getElementById("newBtn").onclick=function(){
   hash=randHash(); MAN={}; dealAll(hash);
   var sl=document.getElementById("rotSlider"); sl.max=eff("bsteps")-1;
   buildDots(); applyState(); syncUI(); refreshReadout();
-  if(playing&&eff("voice")===2)droneStart();
+  if(playing&&eff("voice")>=2)droneStart();
 };
 
 dealAll(hash);
