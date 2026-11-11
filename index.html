@@ -34,7 +34,7 @@
 </head>
 <body>
 <h1>HASH-SEED HARMONIC SYNTHESIZER</h1>
-<div class="sub">Touring chassis: dot-field sequencer · production pluck / flam / heartbeat · weighted harmony × tuning<br>
+<div class="sub">Touring chassis: dot-field sequencer · production pluck / heartbeat · weighted harmony × tuning<br>
 <span class="note">Tonal span folded in: interval path · second voice (fifth above) · long loops · root / octave · throat-song voice · A4=432Hz · tuning locked to Pythagorean</span></div>
 <div class="row" style="margin-top:10px">
   <button id="playBtn" class="big">▶ PLAY</button>
@@ -72,7 +72,7 @@
    Chassis: 99-dot sequencer — every dot blinks at an integer
    harmonic of the loop frequency (h in {2,3,4,6,8,12}, dealt
    freely per dot), peaks phase-locked to the 24-tick grid, top-2
-   strikes per tick, production pluck + 40ms flam + heartbeat
+   strikes per tick, production pluck + heartbeat
    swell + path filler, harmony presets (weighted), 2-chord vamp
    (change on tick 12), audition bass.
    Folded in (tonal-audition): Interval Path + Contour + States as
@@ -299,12 +299,12 @@ function throatNote(f,vel,t){
   var se=ctx.createGain(); se.gain.value=0.55; g.connect(se); se.connect(fxSend);
   o.start(t); o.stop(t+4); o2.start(t); o2.stop(t+4); vib.start(t); vib.stop(t+4);
 }
-function voiceStrike(nf,vel,t,flam){
+function voiceStrike(nf,vel,t){
   var v=eff("voice");
   /* Both (v=2): pluck and throat layer on the same strike; the throat
      overtone is trimmed so the stack leaves headroom for the pluck. */
   if(v===1||v===2)throatNote(nf.f,vel*(v===2?0.85:1),t);
-  if(v===0||v===2){ if(flam)pluck(nf.mf,vel,t-0.04); pluck(nf.mf,vel,t); }
+  if(v===0||v===2)pluck(nf.mf,vel,t);
 }
 function bassNote(half,t){  /* audition-only soft root at chord change */
   var vr=preset.vamp[half], bc=0;
@@ -325,9 +325,9 @@ function doStrike(dotIdx,vel,t,half,degOv){
   var d=dots[dotIdx];
   var deg=(degOv!==undefined)?degOv:nextDeg();
   var nf=noteFreq(deg,d.oct,half);
-  voiceStrike(nf,vel,t,true);
+  voiceStrike(nf,vel,t);
   var nf2=noteFreq(SECONDS_T[2].f(deg,strikeCount),d.oct,half);  /* second voice: Fifth above, locked */
-  voiceStrike(nf2,vel*0.6,t+0.02,false);
+  voiceStrike(nf2,vel*0.6,t+0.02);
   strikeCount++;
   d.flash=t-t0aud;
 }
@@ -591,7 +591,7 @@ function refreshReadout(){
     'melody <b class="trait">'+mel+'</b><br>'+
     'second voice <b class="trait">Fifth above (locked)</b> · loop <b class="trait">'+LOOP_SEC+'s</b> · voice <b class="trait">'+VOICES[eff("voice")]+'</b><br>'+
     '<span id="now"></span><br>'+
-    '<span class="note">Touring chassis (dot sequencer, flam, heartbeat, filler) + Tonal span · soft bass at chord changes is audition-only</span>';
+    '<span class="note">Touring chassis (dot sequencer, heartbeat, filler) + Tonal span · soft bass at chord changes is audition-only</span>';
   drawSeq();
 }
 var playBtn=document.getElementById("playBtn");
