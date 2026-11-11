@@ -470,7 +470,7 @@ function draw(ts){
      dot cycles between the near and far side. Project each dot,
      thread the spiral by depth, paint far side first. */
   var spin=-(playing?(ctx.currentTime-t0aud):performance.now()/1000)*0.122173;  /* 7 deg/s */
-  var cf=Math.cos(spin), sf=Math.sin(spin), ct=Math.cos(0.42), stt=Math.sin(0.42), SR=R*0.88;
+  var cf=Math.cos(spin), sf=Math.sin(spin), ct=Math.cos(0.42), stt=Math.sin(0.42), SR=R*0.64;
   var AY=0.70711, AZ=0.70711;   /* spin axis (0, AY, AZ), unit */
   var proj=[];
   for(var pi=0;pi<dots.length;pi++){
