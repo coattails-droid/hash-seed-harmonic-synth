@@ -407,9 +407,6 @@ function draw(ts){
       cx2d.globalAlpha=1;
     }
   }
-  cx2d.fillStyle="rgba(232,228,216,0.5)"; cx2d.font="10px monospace"; cx2d.textAlign="center";
-  var half=Math.floor((el%LOOP_SEC)/LOOP_SEC*24)<12?0:1;
-  cx2d.fillText(vampRootName(half)+" · "+preset.n, CX, CY+3);
 }
 
 /* ---------- UI ---------- */
