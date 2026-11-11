@@ -130,22 +130,32 @@ var NAMES_F=["C","Db","D","Eb","E","F","Gb","G","Ab","A","Bb","B"];
 var RING_N=[12,33,33,21], RING_R=[0.17,0.40,0.60,0.82], ROCT=[0,1,1,2];
 var DOT_COLORS=["#ffb347","#ff7f50","#ff4d3d"];
 
-/* ---------- tuning (Tonal implementation: root-relative) ---------- */
-function fifthStack(fifth){
-  var n={0:0,7:1,2:2,9:3,4:4,11:5,6:6,1:-5,8:-4,3:-3,10:-2,5:-1},t=[],pc;
-  for(pc=0;pc<12;pc++){var c=(((n[pc]*fifth)%1200)+1200)%1200,off=c-pc*100;
-    if(off>600)off-=1200;if(off<=-600)off+=1200;t.push(off);}
-  return t;
-}
-var PYTH=fifthStack(701.955), MEANT=fifthStack(696.578);
+/* ---------- tuning: root-relative, degrees spelled per root ----------
+   Each scale degree keeps its letter (from the preset's note names), so
+   its position in the fifth stack is solved per root: 7k = semitones
+   (mod 12) and 4k = letter steps (mod 7). A major third is therefore
+   81/64 from EVERY root, a minor 2nd the 90.22c limma, a minor 7th
+   16/9 — spelling follows the scale, not a fixed pitch-class table. */
+var LETTERS="CDEFGAB";
+PRESETS.forEach(function(p){
+  if(!p.iv)return;
+  var toks=p.names.split(" "), base=LETTERS.indexOf(toks[0].charAt(0));
+  p.letOff=toks.map(function(tk){return (LETTERS.indexOf(tk.charAt(0))-base+7)%7;});
+});
 var JUST_R={0:1,1:16/15,2:9/8,3:6/5,4:5/4,5:4/3,6:45/32,7:3/2,8:8/5,9:5/3,10:9/5,11:15/8};
-function tuneCents(ti,semiFromRoot,rootPc){
+function degCents(ti,letOff,semiFromRoot){
   if(ti===0)return 0;
-  var pc=((rootPc+semiFromRoot)%12+12)%12;
   var sm=((semiFromRoot%12)+12)%12;
   if(ti===1)return 1200*Math.log(JUST_R[sm])/Math.LN2-sm*100;
-  var T=ti===2?PYTH:MEANT;
-  return T[pc]-T[rootPc];
+  var fifth=ti===2?701.955:696.578, k;
+  for(k=-12;k<=18;k++){
+    if(((7*k)%12+12)%12===sm&&((4*k)%7+7)%7===letOff){
+      var c=(((k*fifth)%1200)+1200)%1200, off=c-sm*100;
+      if(off>600)off-=1200; if(off<=-600)off+=1200;
+      return off;
+    }
+  }
+  return 0;
 }
 
 /* ---------- state ---------- */
@@ -227,7 +237,9 @@ function noteFreq(deg,ringOct,half){
     return {f:mtof(mf2), mf:mf2};
   }
   var semi=degToSemi(deg,preset.iv), tot=vr+semi;
-  var c=tuneCents(eff("tune"),tot,eff("root"));
+  var L=preset.iv.length, vdi=preset.iv.indexOf(vr);
+  var lo=(preset.letOff[((deg%L)+L)%L]+preset.letOff[vdi])%7;
+  var c=degCents(eff("tune"),lo,tot);
   var mf3=bm+ringOct*12+tot+c/100;
   return {f:mtof(mf3), mf:mf3};
 }
@@ -295,7 +307,9 @@ function voiceStrike(nf,vel,t,flam){
   if(v===0||v===2){ if(flam)pluck(nf.mf,vel,t-0.04); pluck(nf.mf,vel,t); }
 }
 function bassNote(half,t){  /* audition-only soft root at chord change */
-  var f=mtof(baseMidi()+preset.vamp[half]);
+  var vr=preset.vamp[half], bc=0;
+  if(!preset.cents)bc=degCents(eff("tune"),preset.letOff[preset.iv.indexOf(vr)],vr);
+  var f=mtof(baseMidi()+vr+bc/100);
   var o=ctx.createOscillator(); o.type="sine"; o.frequency.value=f;
   var g=ctx.createGain();
   g.gain.setValueAtTime(0.0001,t);
@@ -542,7 +556,7 @@ function syncUI(){
 }
 function thirdDetune(){
   if(!preset.iv)return "n/a";
-  var c=tuneCents(eff("tune"),preset.iv[2],eff("root"));
+  var c=degCents(eff("tune"),preset.letOff[2],preset.iv[2]);
   return (c>=0?"+":"")+c.toFixed(1)+"¢";
 }
 function drawSeq(){
