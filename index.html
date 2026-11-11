@@ -123,7 +123,6 @@ var PATHS=[
  {n:"Arpeggio",       gen:function(N){var s=[];for(var i=0;i<N;i++)s.push(2*i);return s;}},
  {n:"Stepwise Rise",  gen:function(N){var s=[];for(var i=0;i<N;i++)s.push(i);return s;}},
  {n:"Stepwise Fall",  gen:function(N){var s=[];for(var i=0;i<N;i++)s.push(N-1-i);return s;}},
- {n:"Call & Answer",  gen:function(N){var s=[],k=Math.ceil(N/2),i;for(i=0;i<k;i++)s.push(i);var st=(N%2===0)?k-1:k-2;for(i=st;i>=0;i--)s.push(i);return s;}},
  {n:"Pedal Tone",     gen:function(N){var s=[];for(var i=0;i<N;i++)s.push(i%2===0?0:(i+1)/2);return s;}},
  {n:"Fifths Ladder",  gen:function(N,L,iv){var s=[];for(var i=0;i<N;i++)s.push(nearestDeg(7*i,L,iv));return s;}}
 ];
@@ -194,7 +193,7 @@ function dealAll(h){
   for(var i=0;i<PRESETS.length;i++){acc+=PRESETS[i].w;if(x<acc){hi=i;break;}}
   S.harmony=hi;
   S.root=D("root",12); S.oct=D("oct",3);
-  S.path=D("path",6); S.contour=D("contour",2);
+  S.path=D("path",5); S.contour=D("contour",2);
   S.states=3+D("states",6);
   S.loop=D("loop",4);
 }
