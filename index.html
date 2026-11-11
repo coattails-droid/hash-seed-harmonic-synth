@@ -32,33 +32,19 @@
 <body>
 <h1>TOURING × TONAL · MERGED AUDITION</h1>
 <div class="sub">Touring chassis: dot-field sequencer · production pluck / flam / heartbeat · weighted harmony × tuning<br>
-<span class="note">Tonal span folded in: pitch mode · interval path · second voice · beat gate · long loops · root / octave · throat-song voice · A4=432Hz</span></div>
+<span class="note">Tonal span folded in: interval path · second voice (fifth above) · long loops · root / octave · throat-song voice · A4=432Hz · tuning locked to Pythagorean</span></div>
 <canvas id="cv" width="480" height="480"></canvas>
 
 <div class="sec">PITCH — from Tonal</div>
-<div class="row" id="modeRow"></div>
 <div class="row" id="rootRow"></div>
 <div class="row" id="octRow"></div>
 
 <div class="sec">HARMONY — Touring presets, hash slice 00–99, weighted</div>
 <div class="row" id="harmRow"></div>
-<div class="sec">TUNING</div>
-<div class="row" id="tuneRow"></div>
-
-<div class="sec">MELODY SOURCE</div>
-<div class="row" id="melodyRow"></div>
+<div class="sec">MELODY — INTERVAL PATH</div>
 <div class="row" id="pathRow"></div>
 <div class="row" id="contourRow"></div>
 <div class="row" id="statesRow"></div>
-
-<div class="sec">SECOND VOICE — from Tonal</div>
-<div class="row" id="secondRow"></div>
-
-<div class="sec">BEAT GATE — from Tonal (gates the dot sequencer)</div>
-<div class="row" id="beatRow"></div>
-<div class="row" id="pulseRow"></div>
-<div class="row" id="bstepsRow"></div>
-<div class="row"><span class="rlabel">rotation</span><input type="range" id="rotSlider" min="0" max="15" value="0"><span class="rlabel" id="rotVal">0</span></div>
 
 <div class="sec">LOOP</div>
 <div class="row" id="loopRow"></div>
@@ -80,11 +66,11 @@
    strikes per tick, production pluck + 40ms flam + heartbeat swell
    + climbing filler, 24 ticks per loop, harmony presets (weighted)
    x tuning, 2-chord vamp (change on tick 12), audition bass.
-   Folded in (tonal-audition): Pitch Mode (Root+Octave / Overtone
-   Walk), Interval Path + Contour + States as an alternate melody
-   source (dots trigger, path orders the pitches), Second Voice,
-   Euclidean Beat gate, Loop 16/27/36/45/54s, Root (12), Octave
-   band (C3/C4/C5), Voices (Pluck / Throat Song / Both layered).
+   Folded in (tonal-audition): Interval Path + Contour + States as
+   the melody source (dots trigger, path orders the pitches), Second
+   Voice locked to Fifth above, Loop 27/36/45s, Root (12),
+   Octave band (C3/C4/C5), Voices (Pluck / Throat Song / Both).
+   Tuning is locked to Pythagorean.
    ============================================================ */
 
 function xmur3(str){var h=1779033703^str.length;for(var i=0;i<str.length;i++){h=Math.imul(h^str.charCodeAt(i),3432918353);h=h<<13|h>>>19;}return function(){h=Math.imul(h^(h>>>16),2246822507);h=Math.imul(h^(h>>>13),3266489909);return (h^=h>>>16)>>>0;};}
@@ -103,8 +89,6 @@ var PRESETS=[
  {n:"Slendro haze",  w:4,  cents:[0,240,480,720,960],names:"slendro 5-TET",   vamp:[0,9], vampN:"I–vi",  flat:false, lockTuning:true}
 ];
 var TUNINGS=["12-TET","5-Limit Just","Pythagorean","¼-Comma Meantone"];
-var MODES=["Root + Octave","Overtone Walk"];
-var MELODIES=["Dot degrees","Interval Path"];
 var CONTOURS=["Prime","Retrograde","Inversion"];
 var PATHS=[
  {n:"Arpeggio",       gen:function(N){var s=[];for(var i=0;i<N;i++)s.push(2*i);return s;}},
@@ -130,13 +114,12 @@ var SECONDS_T=[
  {n:"Alternate",    f:function(d,j){return j%2===0?d+2:d-1;}}
 ];
 var VOICES=["Pluck","Throat Song","Both"];
-var LOOPS=[16,27,36,45,54];
+var LOOPS=[27,36,45];
 var OCTAVES=["C3","C4","C5"];
 var NAMES_S=["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
 var NAMES_F=["C","Db","D","Eb","E","F","Gb","G","Ab","A","Bb","B"];
 var RING_N=[12,33,33,21], RING_R=[0.17,0.40,0.60,0.82], ROCT=[0,1,1,2];
 var DOT_COLORS=["#ffb347","#ff7f50","#ff4d3d"];
-var PARTS=[8,9,10,11,12,13,14,15,16];
 
 /* ---------- tuning (Tonal implementation: root-relative) ---------- */
 function fifthStack(fifth){
@@ -158,8 +141,8 @@ function tuneCents(ti,semiFromRoot,rootPc){
 
 /* ---------- state ---------- */
 var hash=randHash();
-var S={harmony:0,tune:0,mode:0,root:2,oct:1,melody:0,path:0,contour:0,states:5,
-       second:0,beatOn:0,pulses:6,bsteps:16,rot:0,loop:0,voice:2};
+var S={harmony:0,tune:2,root:2,oct:1,path:0,contour:0,states:5,
+       loop:0,voice:2};
 var MAN={};
 function eff(k){return MAN[k]!==undefined?MAN[k]:S[k];}
 function dealAll(h){
@@ -167,23 +150,18 @@ function dealAll(h){
   var x=(parseInt(h.slice(0,2),16)/256)*100,acc=0,hi=0;
   for(var i=0;i<PRESETS.length;i++){acc+=PRESETS[i].w;if(x<acc){hi=i;break;}}
   S.harmony=hi;
-  S.tune=D("tune",4); S.mode=D("mode",2);
   S.root=D("root",12); S.oct=D("oct",3);
-  S.melody=D("melody",2); S.path=D("path",6); S.contour=D("contour",3);
+  S.path=D("path",6); S.contour=D("contour",3);
   S.states=3+D("states",6);
-  S.second=1+D("second",5);
-  S.beatOn=D("beat",2); S.pulses=4+D("pulses",6);
-  S.bsteps=D("bsteps",2)?16:12; S.rot=D("rot",S.bsteps);
-  S.loop=D("loop",5);
+  S.loop=D("loop",3);
 }
 
 /* ---------- derived state ---------- */
-var preset=PRESETS[0], scaleLen=5, dots=[], hbK=2/3, hbName="", fillStart=0, fillDeg=0;
-var STEP=2/3, LOOP_SEC=16, seq=[], pathPtr=0, beatPat=[], strikeCount=0;
+var preset=PRESETS[0], scaleLen=5, dots=[], hbK=2/3, hbName="";
+var STEP=27/24, LOOP_SEC=27, seq=[], pathPtr=0, strikeCount=0;
 function baseMidi(){return 38+(eff("root")-2)+12*(eff("oct")-1);}
-function curScaleLen(){return eff("mode")===1?9:(preset.cents?preset.cents.length:preset.iv.length);}
+function curScaleLen(){return preset.cents?preset.cents.length:preset.iv.length;}
 function ladderIv(){
-  if(eff("mode")===1)return [0,1,2,3,4,5,6,7,8];
   if(preset.iv)return preset.iv;
   return preset.cents.map(function(c){return c/100;});
 }
@@ -198,12 +176,10 @@ function applyState(){
   preset=PRESETS[eff("harmony")];
   scaleLen=curScaleLen();
   var fs=cyrb53(hash+"av");
-  fillStart=fs%scaleLen; fillDeg=fillStart;
   var hb=fs%10;
   hbK=hb<5?2/3:hb<8?11/12:7/6;
   hbName=hb<5?"resting 60":hb<8?"active 82.5":"racing 105";
   LOOP_SEC=LOOPS[eff("loop")]; STEP=LOOP_SEC/24;
-  beatPat=euclid(eff("pulses"),eff("bsteps"),eff("rot")%eff("bsteps"));
   seq=buildSeq(); pathPtr=0;
 }
 function buildDots(){
@@ -213,7 +189,7 @@ function buildDots(){
     dots.push({
       ang:(i/RING_N[r])*Math.PI*2+rnd()*0.3, rad:RING_R[r],
       period:2+rnd()*2.5, phase:rnd(), dir:(r%2===0)?1:-1,
-      oct:ROCT[r], deg:cyrb53(hash+":"+idx)%scaleLen,
+      oct:ROCT[r],
       color:DOT_COLORS[Math.floor(rnd()*3)], flash:-1e9
     });
     idx++;
@@ -226,11 +202,6 @@ function degToSemi(deg,iv){
 /* note for a degree: returns {f, mf|null} */
 function noteFreq(deg,ringOct,half){
   var vr=preset.vamp[half], bm=baseMidi();
-  if(eff("mode")===1){
-    var fund=mtof(bm+vr);
-    var idx=((deg%9)+9)%9, k=Math.floor(deg/9)+ringOct;
-    return {f:fund*(PARTS[idx]*Math.pow(2,k))/8, mf:null};
-  }
   if(preset.cents){
     var L=preset.cents.length, ci=((deg%L)+L)%L, co=Math.floor(deg/L);
     var cTot=vr*100+preset.cents[ci]+co*1200+ringOct*1200;
@@ -244,12 +215,6 @@ function noteFreq(deg,ringOct,half){
 }
 function nameFor(pc,flat){return (flat?NAMES_F:NAMES_S)[((pc%12)+12)%12];}
 function vampRootName(half){return nameFor(eff("root")+preset.vamp[half],preset.flat);}
-function euclid(pulses,steps,rot){
-  var p=[],i;
-  for(i=0;i<steps;i++)p.push(((i*pulses)%steps)<pulses?1:0);
-  var r=[];for(i=0;i<steps;i++)r.push(p[(i+rot)%steps]);
-  return r;
-}
 
 /* ---------- synth ---------- */
 var ctx=null, master, dryBus, fxSend, t0aud=0, tickN=0, timer=0, playing=false;
@@ -269,21 +234,6 @@ function initAudio(){
 }
 function pluck(mf,vel,t){  /* production voice, midiFloat in */
   var f=mtof(mf);
-  var fl=ctx.createBiquadFilter(); fl.type="lowpass"; fl.Q.value=0.3;
-  fl.frequency.value=1500+vel*3500;
-  var g=ctx.createGain();
-  g.gain.setValueAtTime(0.0001,t);
-  g.gain.linearRampToValueAtTime(vel*0.24,t+0.008);
-  g.gain.exponentialRampToValueAtTime(0.0001,t+2.8);
-  [[1,1.0],[2,0.25],[2.99,0.10]].forEach(function(p){
-    var o=ctx.createOscillator(); o.type="sine"; o.frequency.value=f*p[0];
-    var pg=ctx.createGain(); pg.gain.value=p[1];
-    o.connect(pg); pg.connect(fl); o.start(t); o.stop(t+3.0);
-  });
-  fl.connect(g); g.connect(dryBus);
-  var s=ctx.createGain(); s.gain.value=0.6; g.connect(s); s.connect(fxSend);
-}
-function sinePluck(f,vel,t){  /* freq-domain pluck for overtone mode */
   var fl=ctx.createBiquadFilter(); fl.type="lowpass"; fl.Q.value=0.3;
   fl.frequency.value=1500+vel*3500;
   var g=ctx.createGain();
@@ -344,10 +294,7 @@ function voiceStrike(nf,vel,t,flam){
   /* Both (v=2): pluck and throat layer on the same strike; the throat
      overtone is trimmed so the stack leaves headroom for the pluck. */
   if(v===1||v===2)throatNote(nf.f,vel*(v===2?0.75:1),t);
-  if(v===0||v===2){
-    if(nf.mf!==null){ if(flam)pluck(nf.mf,vel,t-0.04); pluck(nf.mf,vel,t); }
-    else sinePluck(nf.f,vel,t);
-  }
+  if(v===0||v===2){ if(flam)pluck(nf.mf,vel,t-0.04); pluck(nf.mf,vel,t); }
 }
 function bassNote(half,t){  /* audition-only soft root at chord change */
   var f=mtof(baseMidi()+preset.vamp[half]);
@@ -359,27 +306,16 @@ function bassNote(half,t){  /* audition-only soft root at chord change */
   o.connect(g); g.connect(dryBus);
   o.start(t); o.stop(t+3.2);
 }
-function nextDeg(dotDeg){
-  if(eff("melody")===1){ var d=seq[pathPtr%seq.length]; pathPtr++; return d; }
-  return dotDeg;
+function nextDeg(){
+  var d=seq[pathPtr%seq.length]; pathPtr++; return d;
 }
 function doStrike(dotIdx,vel,t,half,degOv){
   var d=dots[dotIdx];
-  var deg=(degOv!==undefined)?degOv:nextDeg(d.deg);
+  var deg=(degOv!==undefined)?degOv:nextDeg();
   var nf=noteFreq(deg,d.oct,half);
   voiceStrike(nf,vel,t,true);
-  var sv=eff("second");
-  if(sv>0){
-    var nf2;
-    if(eff("mode")===1){
-      var r=[8/9,5/4,3/2,4/5,0][sv-1];
-      if(sv===5)r=strikeCount%2===0?5/4:8/9;
-      nf2={f:nf.f*r, mf:null};
-    }else{
-      nf2=noteFreq(SECONDS_T[sv-1].f(deg,strikeCount),d.oct,half);
-    }
-    voiceStrike(nf2,vel*0.6,t+0.02,false);
-  }
+  var nf2=noteFreq(SECONDS_T[2].f(deg,strikeCount),d.oct,half);  /* second voice: Fifth above, locked */
+  voiceStrike(nf2,vel*0.6,t+0.02,false);
   strikeCount++;
   d.flash=t-t0aud;
 }
@@ -389,10 +325,6 @@ function scheduleTick(t,li){
     bassNote(half,t);
     var nowEl=document.getElementById("now");
     if(nowEl)nowEl.innerHTML='half <b>'+(half+1)+'/2</b> · <b class="chord">'+vampRootName(half)+'</b> <span class="note">('+preset.vampN+')</span>';
-  }
-  if(eff("beatOn")===1){
-    var bs=Math.floor(li*eff("bsteps")/24);
-    if(!beatPat[bs])return;   /* beat gate: silent tick */
   }
   var el=t-t0aud, cand=[];
   for(var i=0;i<dots.length;i++){
@@ -405,10 +337,7 @@ function scheduleTick(t,li){
   if(cand.length){
     for(var k=0;k<Math.min(2,cand.length);k++)doStrike(cand[k].i,0.9*sw,t,half);
   }else{
-    var fd;
-    if(eff("melody")===1){ fd=nextDeg(0); }
-    else{ if(li===0)fillDeg=fillStart; else fillDeg=(fillDeg+1)%scaleLen; fd=fillDeg; }
-    doStrike(cyrb53(hash+"fl"+li)%dots.length,0.3*sw,t,half,fd);
+    doStrike(cyrb53(hash+"fl"+li)%dots.length,0.3*sw,t,half,nextDeg());
   }
 }
 function pump(){
@@ -472,68 +401,47 @@ function mkRow(id,items,cur,fmt,dis){
     el.appendChild(b);
   });
 }
-var KEYMAP={modeRow:"mode",rootRow:"root",octRow:"oct",harmRow:"harmony",tuneRow:"tune",
-  melodyRow:"melody",pathRow:"path",contourRow:"contour",statesRow:"states",secondRow:"second",
-  beatRow:"beatOn",pulseRow:"pulses",bstepsRow:"bsteps",loopRow:"loop",voiceRow:"voice"};
-var VALMAP={states:[3,4,5,6,7,8],pulses:[4,5,6,7,8,9],bsteps:[12,16]};
+var KEYMAP={rootRow:"root",octRow:"oct",harmRow:"harmony",
+  pathRow:"path",contourRow:"contour",statesRow:"states",loopRow:"loop",voiceRow:"voice"};
+var VALMAP={states:[3,4,5,6,7,8]};
 function pick(id,i){
   var k=KEYMAP[id];
   MAN[k]=VALMAP[k]?VALMAP[k][i]:i;
-  if(k==="bsteps"){ var sl=document.getElementById("rotSlider"); sl.max=MAN.bsteps-1;
-    if(eff("rot")>=MAN.bsteps){MAN.rot=0; sl.value=0; document.getElementById("rotVal").textContent="0";} }
-  if(k==="harmony"||k==="mode")buildDots();
+  if(k==="harmony")buildDots();
   if(k==="voice"&&playing){ if(eff("voice")>=1)droneStart(); else droneStop(); }
   if((k==="root"||k==="oct")&&playing&&eff("voice")>=1)droneStart();
   applyState(); syncUI(); refreshReadout();
 }
-function tuneLocked(){ return eff("mode")===1||preset.lockTuning; }
 function syncUI(){
-  var pathOff=eff("melody")===0, beatOff=eff("beatOn")===0;
-  mkRow("modeRow",MODES,eff("mode"));
   mkRow("rootRow",NAMES_S,eff("root"));
   mkRow("octRow",OCTAVES,eff("oct"));
   mkRow("harmRow",PRESETS,eff("harmony"),function(p){return p.n+' <span class="wt">'+p.w+"</span>";});
-  mkRow("tuneRow",TUNINGS,eff("tune"),null,function(){return tuneLocked();});
-  mkRow("melodyRow",MELODIES,eff("melody"));
-  mkRow("pathRow",PATHS.map(function(p){return p.n;}),eff("path"),null,function(){return pathOff;});
-  mkRow("contourRow",CONTOURS,eff("contour"),null,function(){return pathOff;});
-  mkRow("statesRow",[3,4,5,6,7,8],eff("states"),null,function(){return pathOff;});
-  mkRow("secondRow",["Off"].concat(SECONDS_T.map(function(s){return s.n;})),eff("second"));
-  mkRow("beatRow",["Off","On"],eff("beatOn"));
-  mkRow("pulseRow",[4,5,6,7,8,9],eff("pulses"),null,function(){return beatOff;});
-  mkRow("bstepsRow",[12,16],eff("bsteps"),null,function(){return beatOff;});
+  mkRow("pathRow",PATHS.map(function(p){return p.n;}),eff("path"));
+  mkRow("contourRow",CONTOURS,eff("contour"));
+  mkRow("statesRow",[3,4,5,6,7,8],eff("states"));
   mkRow("loopRow",LOOPS.map(function(l){return l+"s";}),eff("loop"));
   mkRow("voiceRow",VOICES,eff("voice"));
-  var sl=document.getElementById("rotSlider"); sl.max=eff("bsteps")-1; sl.disabled=beatOff;
-  if(+sl.value!==eff("rot"))sl.value=eff("rot");
-  document.getElementById("rotVal").textContent=eff("rot");
 }
 function thirdDetune(){
-  if(tuneLocked()||!preset.iv)return "n/a";
+  if(!preset.iv)return "n/a";
   var c=tuneCents(eff("tune"),preset.iv[2],eff("root"));
   return (c>=0?"+":"")+c.toFixed(1)+"¢";
 }
 function refreshReadout(){
   var manual=Object.keys(MAN).length>0, ti=eff("tune");
   var pat=preset.iv?preset.iv.join(" "):preset.cents.join("¢ ")+"¢";
-  var mel=eff("melody")===0?"Dot degrees":
-    PATHS[eff("path")].n+" · "+CONTOURS[eff("contour")]+" · "+eff("states")+" states <span class='note'>["+seq.join(" ")+"]</span>";
+  var mel=PATHS[eff("path")].n+" · "+CONTOURS[eff("contour")]+" · "+eff("states")+" states <span class='note'>["+seq.join(" ")+"]</span>";
   document.getElementById("readout").innerHTML=
     'token <b>'+hash.slice(0,12)+'…</b> '+(manual?'<span class="note">(manual override)</span>':'<span class="note">(hash-dealt)</span>')+'<br>'+
-    'Pitch Mode <b class="trait">'+MODES[eff("mode")]+'</b> · Root <b class="trait">'+nameFor(eff("root"),preset.flat)+'</b> · '+OCTAVES[eff("oct")]+'<br>'+
+    'Root <b class="trait">'+nameFor(eff("root"),preset.flat)+'</b> · '+OCTAVES[eff("oct")]+'<br>'+
     'harmony <b class="trait">'+preset.n+'</b> <span class="wt">'+preset.w+'%</span> · scale <b>'+pat+'</b> <span class="note">(at D: '+preset.names+')</span><br>'+
     'vamp <b class="chord">'+vampRootName(0)+' → '+vampRootName(1)+'</b> <span class="note">('+preset.vampN+', half + half)</span><br>'+
-    'tuning <b class="trait">'+(eff("mode")===1?"Pure Overtone Ratios (locked)":preset.lockTuning?"Slendro 5-TET (locked)":TUNINGS[ti])+'</b> <span class="note">3rd '+thirdDetune()+'</span> · heartbeat <b class="trait">'+hbName+'</b> <span class="note">50/30/20</span><br>'+
+    'tuning <b class="trait">'+(preset.lockTuning?"Slendro 5-TET (locked)":TUNINGS[ti]+" (locked)")+'</b> <span class="note">3rd '+thirdDetune()+'</span> · heartbeat <b class="trait">'+hbName+'</b> <span class="note">50/30/20</span><br>'+
     'melody <b class="trait">'+mel+'</b><br>'+
-    'second voice <b class="trait">'+(eff("second")===0?"Off":SECONDS_T[eff("second")-1].n)+'</b> · beat <b class="trait">'+(eff("beatOn")===0?"Off":eff("pulses")+" / "+eff("bsteps")+" · rot "+eff("rot"))+'</b> · loop <b class="trait">'+LOOP_SEC+'s</b> · voice <b class="trait">'+VOICES[eff("voice")]+'</b><br>'+
+    'second voice <b class="trait">Fifth above (locked)</b> · loop <b class="trait">'+LOOP_SEC+'s</b> · voice <b class="trait">'+VOICES[eff("voice")]+'</b><br>'+
     '<span id="now"></span><br>'+
     '<span class="note">Touring chassis (dot sequencer, flam, heartbeat, filler) + Tonal span · soft bass at chord changes is audition-only</span>';
 }
-document.getElementById("rotSlider").oninput=function(e){
-  MAN.rot=+e.target.value;
-  document.getElementById("rotVal").textContent=MAN.rot;
-  applyState(); refreshReadout();
-};
 var playBtn=document.getElementById("playBtn");
 playBtn.onclick=function(){
   if(!ctx)initAudio();
@@ -551,7 +459,6 @@ playBtn.onclick=function(){
 };
 document.getElementById("newBtn").onclick=function(){
   hash=randHash(); MAN={}; dealAll(hash);
-  var sl=document.getElementById("rotSlider"); sl.max=eff("bsteps")-1;
   buildDots(); applyState(); syncUI(); refreshReadout();
   if(playing&&eff("voice")>=1)droneStart();
 };
