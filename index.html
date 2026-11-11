@@ -494,7 +494,7 @@ function draw(ts){
   cx2d.lineWidth=1;
   for(var gi=1;gi<proj.length;gi++){
     var gz=(proj[gi-1].z+proj[gi].z)/2;
-    cx2d.strokeStyle="rgba(255,255,255,"+(0.012+0.05*(gz*0.5+0.5)).toFixed(3)+")";
+    cx2d.strokeStyle="rgba(255,255,255,"+(0.03+0.08*(gz*0.5+0.5)).toFixed(3)+")";
     cx2d.beginPath(); cx2d.moveTo(proj[gi-1].x,proj[gi-1].y); cx2d.lineTo(proj[gi].x,proj[gi].y); cx2d.stroke();
   }
   var order=proj.slice().sort(function(a,b2){return a.z-b2.z;});
