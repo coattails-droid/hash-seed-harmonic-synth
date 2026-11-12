@@ -109,11 +109,11 @@ function randHash(){var s="",c="0123456789abcdef";for(var i=0;i<64;i++)s+=c[Math
 
 /* ---------- tables ---------- */
 var PRESETS=[
- {n:"Sunline",       w:42, iv:[0,2,4,7,9],          names:"D E F# A B",       vamp:[0,9], vampN:"I–vi",  flat:false},
- {n:"Lydian lift",   w:24, iv:[0,2,4,6,7,9,11],     names:"D E F# G# A B C#", vamp:[0,2], vampN:"I–II",  flat:false},
- {n:"Hirajoshi dusk",w:18, iv:[0,2,3,7,8],          names:"D E F A Bb",       vamp:[0,8], vampN:"i–bVI", flat:true},
- {n:"Overtone",      w:9,  iv:[0,2,4,6,7,9,10],     names:"D E F# G# A B C",  vamp:[0,7], vampN:"I7–V7", flat:false},
- {n:"Byzantine",     w:7,  iv:[0,1,4,5,7,8,11],     names:"D Eb F# G A Bb C#",vamp:[0,1], vampN:"i–bII", flat:true}
+ {n:"Sunline",       w:20, iv:[0,2,4,7,9],          names:"D E F# A B",       vamp:[0,9], vampN:"I–vi",  flat:false},
+ {n:"Lydian lift",   w:20, iv:[0,2,4,6,7,9,11],     names:"D E F# G# A B C#", vamp:[0,2], vampN:"I–II",  flat:false},
+ {n:"Hirajoshi dusk",w:20, iv:[0,2,3,7,8],          names:"D E F A Bb",       vamp:[0,8], vampN:"i–bVI", flat:true},
+ {n:"Overtone",      w:20, iv:[0,2,4,6,7,9,10],     names:"D E F# G# A B C",  vamp:[0,7], vampN:"I7–V7", flat:false},
+ {n:"Byzantine",     w:20, iv:[0,1,4,5,7,8,11],     names:"D Eb F# G A Bb C#",vamp:[0,1], vampN:"i–bII", flat:true}
 ];
 var TUNINGS=["12-TET","5-Limit Just","Pythagorean","¼-Comma Meantone"];
 var PATHS=[
@@ -216,8 +216,8 @@ function buildDots(){
        even height steps, golden-angle turns */
     var sy=1-2*(idx+0.5)/99, sr=Math.sqrt(Math.max(0,1-sy*sy)), st=idx*GA;
     /* the series octave is the C3-C4 blend: each dot's register is
-       dealt — inner rings favor the low register, outer rings high */
-    var blendHigh=rnd()*100<[25,50,50,75][r];
+       dealt as a fair coin between the two registers (balanced) */
+    var blendHigh=rnd()<0.5;
     dots.push({
       px:sr*Math.cos(st), py:sy, pz:sr*Math.sin(st),
       h:h, ph:0.25-dir*pk*h/24, dir:dir,
