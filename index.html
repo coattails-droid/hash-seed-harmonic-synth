@@ -207,9 +207,10 @@ function dealAll(h){
 /* ---------- derived state ---------- */
 var preset=PRESETS[0], scaleLen=5, dots=[], hbK=2/3, hbName="";
 var STEP=27/24, LOOP_SEC=27, seq=[], pathPtr=0, strikeCount=0;
-/* circle-of-fifths layers: the root travels +1 fifth per loop (the
-   Pythagorean comma accruing as drift), strikes walk the melody
-   frame by fifths, and h=3 fifth-ring strikes move the chord */
+/* circle-of-fifths layers: strikes walk the melody frame by
+   fifths (reset each loop, so loops stay consistent), and h=3
+   fifth-ring strikes move the chord. playRoot/driftC are pinned
+   to the dealt root: no travel, no drift. */
 var walkF=0, chordHalf=0, loopChanges=0, playRoot=2, driftC=0, FIFTH_DEG=4;
 function fifthStepDeg(){ var iv=ladderIv(),best=1,bd=1e9; for(var d=1;d<=12;d++){ var dd=Math.abs(degToSemi(d,iv)-7); if(dd<bd){bd=dd;best=d;} } return best; }
 function baseMidi(){return 38+(playRoot-2)+12*(eff("oct")-1);}
@@ -426,10 +427,12 @@ function doStrike(dotIdx,vel,t,half,degOv){
 }
 function scheduleTick(t,li){
   var lp=Math.floor((t-t0aud)/LOOP_SEC);
-  /* layer 1 — form: the root travels +1 fifth per loop; the comma
-     (a pure fifth is 1.955c wider than the 12-TET fifth) accrues */
-  playRoot=((eff("root")+7*lp)%12+12)%12;
-  driftC=lp*1.955;
+  /* form: loops are consistent — the token holds its dealt key and
+     harmonic scale for every loop. (A traveling root that stepped
+     +1 fifth per loop, comma accruing, was tried and removed
+     2026-11-11 at Calvin's direction: consistent, not climbing.) */
+  playRoot=eff("root");
+  driftC=0;
   var el=t-t0aud, cand=[];
   for(var i=0;i<dots.length;i++){
     var d=dots[i];
@@ -445,7 +448,7 @@ function scheduleTick(t,li){
     var nowEl=document.getElementById("now");
     if(nowEl)nowEl.innerHTML='loop <b>'+(lp+1)+'</b> · key <b>'+nameFor(playRoot,preset.flat)+'</b> · <b class="chord">'+vampRootName(chordHalf,playRoot)+'</b> <span class="note">('+preset.vampN+')</span>';
   }
-  if(li===0){ chordHalf=0; loopChanges=0; bassNote(0,t); nowLine(); }
+  if(li===0){ chordHalf=0; loopChanges=0; walkF=0; bassNote(0,t); nowLine(); }
   else if(li===6||li===12||li===18){
     /* layer 6 — trigger: the fifth ring. The chord steps when the
        ring aligns: at least 3 of the h=3 dots (the 3-against-2 dots)
