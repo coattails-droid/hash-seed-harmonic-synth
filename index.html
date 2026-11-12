@@ -310,12 +310,12 @@ function initAudio(){
   ctx=new (window.AudioContext||window.webkitAudioContext)();
   /* mastering chain: master -> 24Hz cleanup -> glue comp -> limiter
      -> soft clipper -> ceiling trim. A compressor limiter alone
-     leaks transients inside its attack window (flam clusters on
-     heartbeat-accent ticks overshot it and clipped phone DACs at
-     high volume), so a soft clipper that stays linear to -2.5dB and
-     only bends overshoot is the true final ceiling, and a -0.5dB
+     leaks transients inside its attack window (dense flam
+     clusters overshot it and clipped phone DACs at high volume),
+     so a soft clipper that stays linear to -2.5dB and only bends
+     overshoot is the true final ceiling, and a -0.5dB
      trim keeps the converter off the rail. */
-  master=ctx.createGain(); master.gain.value=0.75;
+  master=ctx.createGain(); master.gain.value=0.6;
   var hp=ctx.createBiquadFilter(); hp.type="highpass"; hp.frequency.value=24; hp.Q.value=0.4;
   var cp=ctx.createDynamicsCompressor();
   cp.threshold.value=-18; cp.knee.value=18; cp.ratio.value=3; cp.attack.value=0.012; cp.release.value=0.24;
