@@ -413,6 +413,17 @@ function doStrike(dotIdx,vel,t,half,degOv){
   voiceStrike(nf,vel,t);
   midiNote(nf.mf,vel,t-0.04,0.045,0); midiNote(nf.mf,vel,t,STEP,0);
   var nf2=noteFreq(deg+4,d.oct,half);  /* second voice: a fifth above, locked */
+  /* snap the sour fifths: in the seven-note harmonies the +4
+     spelling sometimes lands a diminished (588c) or augmented
+     (816c) fifth — the strikes that read as off key. On those,
+     and only those, the companion sounds the true Pythagorean
+     fifth (701.955c) above the first voice; no scale tone spells
+     it there, so the pitch is taken exactly. Pentatonic and
+     Slendro companions are sixths/sevenths by design — untouched. */
+  if(curScaleLen()===7){
+    var dInt=((nf2.mf-nf.mf)%12+12)%12;
+    if(Math.abs(dInt-7.01955)>0.25){ var mf5=nf.mf+7.01955; nf2={f:mtof(mf5),mf:mf5}; }
+  }
   voiceStrike(nf2,vel*0.6,t);
   midiNote(nf2.mf,vel*0.6,t-0.04,0.045,1); midiNote(nf2.mf,vel*0.6,t,STEP,1);
   /* record pitch instances for the visualizer cores: pitch key ->
