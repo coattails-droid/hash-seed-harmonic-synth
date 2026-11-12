@@ -64,7 +64,6 @@
 <div class="rlabel">pattern</div>
 <div class="row" id="pathRow"></div>
 <div class="rlabel">shape</div>
-<div class="row" id="contourRow"></div>
 <div class="rlabel">notes in the pattern</div>
 <div class="row" id="statesRow"></div>
 <canvas id="seqCv" width="360" height="80" style="margin-top:8px"></canvas>
@@ -197,7 +196,7 @@ function dealAll(h){
   for(var i=0;i<PRESETS.length;i++){acc+=PRESETS[i].w;if(x<acc){hi=i;break;}}
   S.harmony=hi;
   S.root=0; S.oct=0;   /* pitch locked to C3 at Calvin's direction — no root/octave options */
-  S.path=D("path",11); S.contour=D("contour",2);
+  S.path=D("path",11); S.contour=0;   /* Shape locked to As-is at Calvin's direction — no Shape option */
   S.states=3+D("states",6);
   S.loop=D("loop",4);
 }
@@ -220,7 +219,6 @@ function ladderIv(){
 function buildSeq(){
   var N=eff("states"),L=curScaleLen();
   var s=PATHS[eff("path")].gen(N,L,ladderIv());
-  if(eff("contour")===1)s=s.slice().reverse();
   return s;
 }
 function applyState(){
@@ -633,7 +631,7 @@ function buildLoopRow(){
   });
 }
 var KEYMAP={harmRow:"harmony",
-  pathRow:"path",contourRow:"contour",statesRow:"states",loopRow:"loop"};
+  pathRow:"path",statesRow:"states",loopRow:"loop"};
 var VALMAP={states:[3,4,5,6,7,8]};
 function pick(id,i){
   var k=KEYMAP[id];
@@ -644,7 +642,6 @@ function pick(id,i){
 function syncUI(){
   buildHarmRow();
   mkRow("pathRow",PATHS.map(function(p){return p.n;}),eff("path"));
-  mkRow("contourRow",CONTOURS,eff("contour"));
   mkRow("statesRow",[3,4,5,6,7,8],eff("states")-3);
   buildLoopRow();
 }
