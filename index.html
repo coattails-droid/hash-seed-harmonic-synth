@@ -119,7 +119,6 @@ var PRESETS=[
  {n:"Slendro haze",  w:4,  cents:[0,240,480,720,960],names:"slendro 5-TET",   vamp:[0,9], vampN:"I–vi",  flat:false, lockTuning:true}
 ];
 var TUNINGS=["12-TET","5-Limit Just","Pythagorean","¼-Comma Meantone"];
-var CONTOURS=["As-is","Reversed"];
 var PATHS=[
  {n:"Arpeggio",       gen:function(N){var s=[];for(var i=0;i<N;i++)s.push(2*i);return s;}},
  {n:"Stepwise Rise",  gen:function(N){var s=[];for(var i=0;i<N;i++)s.push(i);return s;}},
@@ -190,7 +189,7 @@ function degCents(ti,letOff,semiFromRoot){
 /* ---------- state ---------- */
 var hash=randHash();
 var noteInst={}, keyHit={};   /* pitch instances per loop, for visualizer cores */
-var S={harmony:0,tune:2,root:0,oct:1,path:0,contour:0,states:5,
+var S={harmony:0,tune:2,root:0,oct:1,path:0,states:5,
        loop:0,voice:2};
 var MAN={};
 function eff(k){return MAN[k]!==undefined?MAN[k]:S[k];}
@@ -200,7 +199,7 @@ function dealAll(h){
   for(var i=0;i<PRESETS.length;i++){acc+=PRESETS[i].w;if(x<acc){hi=i;break;}}
   S.harmony=hi;
   S.root=D("root",12); S.oct=D("oct",3);
-  S.path=D("path",11); S.contour=0;   /* Shape locked to As-is at Calvin's direction — no Shape option */
+  S.path=D("path",11);
   S.states=3+D("states",6);
   S.loop=D("loop",3);
 }
@@ -731,7 +730,7 @@ function drawSeq(){
 function refreshReadout(){
   var manual=Object.keys(MAN).length>0, ti=eff("tune");
   var pat=preset.iv?preset.iv.join(" "):preset.cents.join("¢ ")+"¢";
-  var mel=PATHS[eff("path")].n+" · "+CONTOURS[eff("contour")]+" · "+eff("states")+" notes <span class='note'>["+seq.join(" ")+"]</span>";
+  var mel=PATHS[eff("path")].n+" · "+eff("states")+" notes <span class='note'>["+seq.join(" ")+"]</span>";
   document.getElementById("readout").innerHTML=
     'token <b>'+hash.slice(0,12)+'…</b> '+(manual?'<span class="note">(manual override)</span>':'<span class="note">(hash-dealt)</span>')+'<br>'+
     'Root <b class="trait">'+nameFor(eff("root"),preset.flat)+'</b> · '+OCTAVES[eff("oct")]+'<br>'+
