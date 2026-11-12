@@ -123,11 +123,8 @@ var PATHS=[
  {n:"Stepwise Rise",  gen:function(N){var s=[];for(var i=0;i<N;i++)s.push(i);return s;}},
  {n:"Stepwise Fall",  gen:function(N){var s=[];for(var i=0;i<N;i++)s.push(N-1-i);return s;}},
  {n:"Pedal Tone",     gen:function(N){var s=[];for(var i=0;i<N;i++)s.push(i%2===0?0:(i+1)/2);return s;}},
- {n:"Valley",         gen:function(N){var s=[];for(var i=0;i<N;i++)s.push(Math.abs(N-1-2*i));return s;}},
  {n:"Wave",           gen:function(N){var s=[];for(var i=0;i<N;i++)s.push(Math.round(2+2*Math.sin(2*Math.PI*i/N)));return s;}},
- {n:"Zigzag",         gen:function(N){var s=[];for(var i=0;i<N;i++)s.push(i%2===0?i/2:3+(i-1)/2);return s;}},
- {n:"Plateau",        gen:function(N){var s=[];for(var i=0;i<N;i++)s.push(Math.floor(i/2));return s;}},
- {n:"Random Walk",    gen:function(N){var rnd=mulberry32(xmur3(hash+"walk")()),s=[],d=2;for(var i=0;i<N;i++){s.push(d);d=Math.max(0,d+(rnd()<0.5?-1:1)*(rnd()<0.3?2:1));}return s;}}
+ {n:"Zigzag",         gen:function(N){var s=[];for(var i=0;i<N;i++)s.push(i%2===0?i/2:3+(i-1)/2);return s;}}
 ];
 var LOOPS=[54,40,32];  /* loop trait = tempo in BPM, one tick per beat, 24 ticks per loop: 26.67s / 36s / 45s */
 var NAMES_S=["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
@@ -178,7 +175,7 @@ function dealAll(h){
   for(var i=0;i<PRESETS.length;i++){acc+=PRESETS[i].w;if(x<acc){hi=i;break;}}
   S.harmony=hi;
   S.root=D("root",12);
-  S.path=D("path",9);
+  S.path=D("path",6);
   S.states=3+D("states",6);
   S.loop=D("loop",3);
 }
