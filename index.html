@@ -98,9 +98,8 @@
    dealt per dot, loops consistent — the token holds its dealt
    key and harmonic scale, strikes walk the melody frame by
    fifths and reset each loop, the chord steps at the midpoint
-   when the fifth ring aligns. Loops are heartbeat tempos —
-   105 / 82.5 / 60 BPM at one tick per beat (13.7 / 17.5 / 24s),
-   root dealt (12).
+   when the fifth ring aligns. Loop tempos are 53.3 / 40 / 32
+   BPM at one tick per beat (27 / 36 / 45s), root dealt (12).
    ============================================================ */
 
 function xmur3(str){var h=1779033703^str.length;for(var i=0;i<str.length;i++){h=Math.imul(h^str.charCodeAt(i),3432918353);h=h<<13|h>>>19;}return function(){h=Math.imul(h^(h>>>16),2246822507);h=Math.imul(h^(h>>>13),3266489909);return (h^=h>>>16)>>>0;};}
@@ -130,7 +129,7 @@ var PATHS=[
  {n:"Plateau",        gen:function(N){var s=[];for(var i=0;i<N;i++)s.push(Math.floor(i/2));return s;}},
  {n:"Random Walk",    gen:function(N){var rnd=mulberry32(xmur3(hash+"walk")()),s=[],d=2;for(var i=0;i<N;i++){s.push(d);d=Math.max(0,d+(rnd()<0.5?-1:1)*(rnd()<0.3?2:1));}return s;}}
 ];
-var LOOPS=[105,82.5,60];  /* loop trait = tempo in BPM (Touring's heartbeat rates), one tick per beat, 24 ticks per loop: 13.71s / 17.45s / 24s */
+var LOOPS=[53.3,40,32];  /* loop trait = tempo in BPM, one tick per beat, 24 ticks per loop: 27.02s / 36s / 45s — the original loop lengths at tick tempo */
 var NAMES_S=["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
 var NAMES_F=["C","Db","D","Eb","E","F","Gb","G","Ab","A","Bb","B"];
 var RING_N=[12,33,33,21], RING_R=[0.17,0.40,0.60,0.82];
@@ -186,7 +185,7 @@ function dealAll(h){
 
 /* ---------- derived state ---------- */
 var preset=PRESETS[0], scaleLen=5, dots=[];
-var STEP=1440/105/24, LOOP_SEC=1440/105, seq=[], pathPtr=0;
+var STEP=1440/53.3/24, LOOP_SEC=1440/53.3, seq=[], pathPtr=0;
 /* circle-of-fifths layers: strikes walk the melody frame by
    fifths (reset each loop, so loops stay consistent), and h=3
    fifth-ring strikes move the chord. The key is the dealt root:
@@ -661,7 +660,7 @@ function buildLoopRow(){
     var b=document.createElement("button");
     b.classList.add("vbtn");
     if(i===eff("loop"))b.classList.add("on");
-    var wpx=Math.round(bpm/105*76);
+    var wpx=Math.round(bpm/53.3*76);
     b.innerHTML='<div>'+bpm+' BPM</div><div class="track" style="width:76px"><div class="fill" style="width:'+wpx+'px;background:'+DOT_COLORS[i%DOT_COLORS.length]+'"></div></div>';
     b.onclick=function(){pick("loopRow",i);};
     el.appendChild(b);
