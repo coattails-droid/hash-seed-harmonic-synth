@@ -533,11 +533,11 @@ function draw(ts){
   /* The field lives on an invisible sphere (Fibonacci lattice),
      spinning about an axis halfway between its pole and the view
      axis: the ball rolls clockwise on screen while every dot cycles
-     between the near and far side. One revolution per loop, so the
-     sphere returns to its starting orientation as the music does.
-     Project each dot, thread the spiral by depth, paint far side
+     between the near and far side. Half a revolution per loop, so
+     the sphere returns to its starting orientation every second
+     loop. Project each dot, thread the spiral by depth, paint far side
      first. */
-  var spin=-(playing?(ctx.currentTime-t0aud):performance.now()/1000)*(Math.PI*2/LOOP_SEC);  /* one revolution per loop */
+  var spin=-(playing?(ctx.currentTime-t0aud):performance.now()/1000)*(Math.PI/LOOP_SEC);  /* half a revolution per loop */
   var cf=Math.cos(spin), sf=Math.sin(spin), ct=Math.cos(0.42), stt=Math.sin(0.42);
   /* sphere packs at 0.55 of frame, then the view zooms x1.6 so the
      ball fills the frame again (0.88) — dots grow with the zoom,
