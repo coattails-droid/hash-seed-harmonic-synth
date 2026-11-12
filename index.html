@@ -72,6 +72,7 @@
 
 <div class="sec" style="color:#2e6bff">LOOP</div>
 <div class="row" id="loopRow"></div>
+<div class="row"><button id="beatBtn">BASS BEAT · OFF</button></div>
 
 <div class="row" style="margin-top:18px">
   <button id="midiBtn">🎹 ENABLE MIDI OUT</button>
@@ -286,7 +287,7 @@ function nameFor(pc,flat){return (flat?NAMES_F:NAMES_S)[((pc%12)+12)%12];}
 function vampRootName(half,rp){return nameFor((rp===undefined?eff("root"):rp)+preset.vamp[half],preset.flat);}
 
 /* ---------- synth ---------- */
-var ctx=null, master, dryBus, fxSend, t0aud=0, tickN=0, timer=0, playing=false;
+var ctx=null, master, dryBus, fxSend, t0aud=0, tickN=0, timer=0, playing=false, bassBeat=false;
 function mtof(mf){return 432*Math.pow(2,(mf-69)/12);}
 
 /* ---------- MIDI out (Web MIDI) ----------
@@ -329,6 +330,11 @@ function setupMIDI(){
   }, function(){ midiStatus("MIDI out: access denied"); });
 }
 document.getElementById("midiBtn").onclick=setupMIDI;
+document.getElementById("beatBtn").onclick=function(){
+  bassBeat=!bassBeat;
+  this.textContent=bassBeat?"BASS BEAT · ON":"BASS BEAT · OFF";
+  this.classList.toggle("on",bassBeat);
+};
 function initAudio(){
   ctx=new (window.AudioContext||window.webkitAudioContext)();
   /* mastering chain: master -> 24Hz cleanup -> glue comp -> limiter
@@ -398,19 +404,20 @@ function voiceStrike(nf,vel,t,flam){
   if(v===1||v===2)throatNote(nf.f,vel*(v===2?0.85:1),t);
   if(v===0||v===2){ if(flam)pluck(nf.mf,vel,t-0.04); pluck(nf.mf,vel,t); }
 }
-function bassNote(half,t){  /* audition-only soft root at chord change */
+function bassNote(half,t,vol,dur){  /* soft root at chord change; vol/dur scale it for the offbeat pulse */
+  vol=vol||1; dur=dur||3;
   var vr=preset.vamp[half], bc=0;
   if(!preset.cents)bc=degCents(eff("tune"),preset.letOff[preset.iv.indexOf(vr)],vr);
   var bmf=baseMidi()+vr+bc/100+driftC/100;
   var f=mtof(bmf);
-  midiNote(bmf,0.55,t,3.0,2);
+  midiNote(bmf,0.55*vol,t,dur,2);
   var o=ctx.createOscillator(); o.type="sine"; o.frequency.value=f;
   var g=ctx.createGain();
   g.gain.setValueAtTime(0.0001,t);
-  g.gain.linearRampToValueAtTime(0.10,t+0.3);
-  g.gain.exponentialRampToValueAtTime(0.0001,t+3.0);
+  g.gain.linearRampToValueAtTime(0.10*vol,t+dur/10);
+  g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
   o.connect(g); g.connect(dryBus);
-  o.start(t); o.stop(t+3.2);
+  o.start(t); o.stop(t+dur+0.2);
   /* small-speaker support: a 2x harmonic at low gain. Phone drivers
      cannot move air at these 32-65Hz fundamentals — at high volume
      they only strain and buzz. The harmonic is reproducible, and
@@ -419,10 +426,10 @@ function bassNote(half,t){  /* audition-only soft root at chord change */
   var o2=ctx.createOscillator(); o2.type="sine"; o2.frequency.value=f*2;
   var g2=ctx.createGain();
   g2.gain.setValueAtTime(0.0001,t);
-  g2.gain.linearRampToValueAtTime(0.045,t+0.25);
-  g2.gain.exponentialRampToValueAtTime(0.0001,t+2.2);
+  g2.gain.linearRampToValueAtTime(0.045*vol,t+dur/12);
+  g2.gain.exponentialRampToValueAtTime(0.0001,t+dur*0.733);
   o2.connect(g2); g2.connect(dryBus);
-  o2.start(t); o2.stop(t+2.4);
+  o2.start(t); o2.stop(t+dur*0.8);
 }
 function nextDeg(){
   var d=seq[pathPtr%seq.length]; pathPtr++; return d;
@@ -498,6 +505,10 @@ function scheduleTick(t,li){
   if(votes>0)walkF+=FIFTH_DEG; else if(votes<0)walkF-=FIFTH_DEG;
   if(walkF>2*FIFTH_DEG)walkF=4*FIFTH_DEG-walkF;
   if(walkF<-FIFTH_DEG)walkF=-2*FIFTH_DEG-walkF;
+  /* optional bass beat (player toggle): a pulse on the current
+     chord root halfway between ticks, every other tick — offset
+     against the strike pattern, giving the loop a backbeat */
+  if(bassBeat&&li%2===0)bassNote(chordHalf,t+STEP/2,0.7,0.9);
 }
 function pump(){
   if(!timer)return;
