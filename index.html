@@ -21,6 +21,8 @@
   .credit { font-size:12.5px; color:#b8b2a4; text-align:center; margin:0 0 6px; letter-spacing:0.4px;}
   .sub { font-size:11px; color:#8a8578; margin-bottom:10px; letter-spacing:1px; text-align:center; padding:0 16px; line-height:1.7;}
   canvas { border:1px solid #2a2a2a; border-radius:8px; background:#000; }
+  #cv { width:min(480px,94vw); height:auto; }
+  #seqCv { max-width:94vw; height:auto; }
   .sec { font-size:11px; letter-spacing:2px; color:#00f0ff; margin:16px 0 6px; }
   .row { display:flex; gap:8px; margin:6px 0; align-items:center; flex-wrap:wrap; justify-content:center; max-width:760px;}
   button { background:#1a1a1a; color:#e8e4d8; border:1px solid #3a3a3a; border-radius:6px;
@@ -55,10 +57,6 @@
 </div>
 <div class="readout" id="readout"></div>
 <canvas id="cv" width="480" height="480"></canvas>
-
-<div class="sec" style="color:#b6ff00">PITCH</div>
-<div class="row" id="rootRow"></div>
-<div class="row" id="octRow"></div>
 
 <div class="sec" style="color:#00ff66">HARMONY</div>
 <div class="row" id="harmRow"></div>
@@ -189,7 +187,7 @@ function degCents(ti,letOff,semiFromRoot){
 /* ---------- state ---------- */
 var hash=randHash();
 var noteInst={}, keyHit={};   /* pitch instances per loop, for visualizer cores */
-var S={harmony:0,tune:2,root:2,oct:1,path:0,contour:0,states:5,
+var S={harmony:0,tune:2,root:0,oct:0,path:0,contour:0,states:5,
        loop:0,voice:2};
 var MAN={};
 function eff(k){return MAN[k]!==undefined?MAN[k]:S[k];}
@@ -198,7 +196,7 @@ function dealAll(h){
   var x=(parseInt(h.slice(0,2),16)/256)*100,acc=0,hi=0;
   for(var i=0;i<PRESETS.length;i++){acc+=PRESETS[i].w;if(x<acc){hi=i;break;}}
   S.harmony=hi;
-  S.root=D("root",12); S.oct=D("oct",3);
+  S.root=0; S.oct=0;   /* pitch locked to C3 at Calvin's direction — no root/octave options */
   S.path=D("path",11); S.contour=D("contour",2);
   S.states=3+D("states",6);
   S.loop=D("loop",4);
@@ -211,7 +209,7 @@ var STEP=27/24, LOOP_SEC=27, seq=[], pathPtr=0, strikeCount=0;
    fifths (reset each loop, so loops stay consistent), and h=3
    fifth-ring strikes move the chord. playRoot/driftC are pinned
    to the dealt root: no travel, no drift. */
-var walkF=0, chordHalf=0, loopChanges=0, playRoot=2, driftC=0, FIFTH_DEG=4;
+var walkF=0, chordHalf=0, loopChanges=0, playRoot=0, driftC=0, FIFTH_DEG=4;
 function fifthStepDeg(){ var iv=ladderIv(),best=1,bd=1e9; for(var d=1;d<=12;d++){ var dd=Math.abs(degToSemi(d,iv)-7); if(dd<bd){bd=dd;best=d;} } return best; }
 function baseMidi(){return 38+(playRoot-2)+12*(eff("oct")-1);}
 function curScaleLen(){return preset.cents?preset.cents.length:preset.iv.length;}
@@ -598,56 +596,6 @@ function mkRow(id,items,cur,fmt,dis){
   });
 }
 /* ---- visual builders: the graphic IS the explanation ---- */
-function buildKeyboard(){
-  /* abstract keyboard: piano geometry kept, rendered in the page theme —
-     dark keys, grey labels, a field dot per key, amber glow on selection */
-  var el=document.getElementById("rootRow"); el.innerHTML="";
-  var kb=document.createElement("div");
-  kb.style.cssText="position:relative;width:252px;height:58px;";
-  var cur=eff("root");
-  function keyInner(pc,small){
-    var dc=DOT_COLORS[pc%DOT_COLORS.length], sel=pc===cur;
-    return '<div style="width:'+(small?4:6)+'px;height:'+(small?4:6)+'px;border-radius:50%;background:'+(sel?"#000":dc)+';opacity:'+(sel?0.8:0.55)+'"></div>'+
-           '<div>'+NAMES_S[pc]+'</div>';
-  }
-  [0,2,4,5,7,9,11].forEach(function(pc,wi){
-    var k=document.createElement("div"), sel=pc===cur, dc=DOT_COLORS[pc%DOT_COLORS.length];
-    k.style.cssText="position:absolute;bottom:0;left:"+(wi*36+1)+"px;width:33px;height:56px;border-radius:6px;cursor:pointer;box-sizing:border-box;"+
-      "border:1px solid "+(sel?dc:"#3a3a3a")+";background:"+(sel?dc:"#1a1a1a")+";color:"+(sel?"#000":"#8a8578")+";"+
-      "box-shadow:"+(sel?"0 0 14px "+hexA(dc,0.45):"none")+";font-size:9px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:5px 0 3px;font-family:monospace;";
-    k.innerHTML=keyInner(pc,false);
-    k.onclick=function(){pick("rootRow",pc);};
-    kb.appendChild(k);
-  });
-  var afterWhite={1:0,3:1,6:3,8:4,10:5};
-  [1,3,6,8,10].forEach(function(pc){
-    var wi=afterWhite[pc], sel=pc===cur, dc=DOT_COLORS[pc%DOT_COLORS.length];
-    var k=document.createElement("div");
-    k.style.cssText="position:absolute;top:0;left:"+((wi+1)*36-11)+"px;width:22px;height:34px;border-radius:5px;cursor:pointer;box-sizing:border-box;z-index:2;"+
-      "border:1px solid "+(sel?dc:"#3a3a3a")+";background:"+(sel?dc:"#0a0a0a")+";color:"+(sel?"#000":"#8a8578")+";"+
-      "box-shadow:"+(sel?"0 0 12px "+hexA(dc,0.5):"none")+";font-size:7px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:4px 0 2px;font-family:monospace;";
-    k.innerHTML=keyInner(pc,true);
-    k.onclick=function(){pick("rootRow",pc);};
-    kb.appendChild(k);
-  });
-  el.appendChild(kb);
-}
-function buildOctRow(){
-  var el=document.getElementById("octRow"); el.innerHTML="";
-  OCTAVES.forEach(function(name,i){
-    var b=document.createElement("button");
-    b.classList.add("vbtn");
-    if(i===eff("oct"))b.classList.add("on");
-    var bars="";
-    for(var j=0;j<3;j++){
-      var h=[7,12,17][j];
-      bars+='<rect x="'+(4+j*9)+'" y="'+(20-h)+'" width="6" height="'+h+'" fill="'+(j<=i?"#00f0ff":"#3a3a3a")+'"/>';
-    }
-    b.innerHTML='<svg width="34" height="22">'+bars+'</svg><div>'+name+'</div>';
-    b.onclick=function(){pick("octRow",i);};
-    el.appendChild(b);
-  });
-}
 function clockSVG(p,i){
   var col=PRESET_COLORS[i];
   var tones=p.iv?p.iv.map(function(s){return s/12;}):p.cents.map(function(c){return c/1200;});
@@ -684,7 +632,7 @@ function buildLoopRow(){
     el.appendChild(b);
   });
 }
-var KEYMAP={rootRow:"root",octRow:"oct",harmRow:"harmony",
+var KEYMAP={harmRow:"harmony",
   pathRow:"path",contourRow:"contour",statesRow:"states",loopRow:"loop"};
 var VALMAP={states:[3,4,5,6,7,8]};
 function pick(id,i){
@@ -694,8 +642,6 @@ function pick(id,i){
   applyState(); syncUI(); refreshReadout();
 }
 function syncUI(){
-  buildKeyboard();
-  buildOctRow();
   buildHarmRow();
   mkRow("pathRow",PATHS.map(function(p){return p.n;}),eff("path"));
   mkRow("contourRow",CONTOURS,eff("contour"));
