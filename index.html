@@ -149,7 +149,7 @@ var SECONDS_T=[
 ];
 var VOICES=["Pluck","Throat Song","Both"];
 var LOOPS=[27,36,45];
-var OCTAVES=["C3","C4","C5"];
+var OCTAVES=["C3","C3–C4","C4"];
 var NAMES_S=["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
 var NAMES_F=["C","Db","D","Eb","E","F","Gb","G","Ab","A","Bb","B"];
 var RING_N=[12,33,33,21], RING_R=[0.17,0.40,0.60,0.82], ROCT=[0,1,1,2];
@@ -213,7 +213,7 @@ var STEP=27/24, LOOP_SEC=27, seq=[], pathPtr=0, strikeCount=0;
    to the dealt root: no travel, no drift. */
 var walkF=0, chordHalf=0, loopChanges=0, playRoot=0, driftC=0, FIFTH_DEG=4;
 function fifthStepDeg(){ var iv=ladderIv(),best=1,bd=1e9; for(var d=1;d<=12;d++){ var dd=Math.abs(degToSemi(d,iv)-7); if(dd<bd){bd=dd;best=d;} } return best; }
-function baseMidi(){return 38+(playRoot-2)+12*(eff("oct")-1);}
+function baseMidi(){return 38+(playRoot-2)+12*([-1,-1,0][eff("oct")]);}   /* anchors: C3 and the C3-C4 blend sit at the C3 register, C4 one octave up; C5 is gone */
 function curScaleLen(){return preset.cents?preset.cents.length:preset.iv.length;}
 function ladderIv(){
   if(preset.iv)return preset.iv;
@@ -248,10 +248,13 @@ function buildDots(){
     /* Fibonacci sphere: the phyllotaxis spiral wrapped on a ball —
        even height steps, golden-angle turns */
     var sy=1-2*(idx+0.5)/99, sr=Math.sqrt(Math.max(0,1-sy*sy)), st=idx*GA;
+    /* blend mode (octave = C3-C4): each dot's register is dealt —
+       inner rings favor the low register, outer rings the high */
+    var blendHigh=rnd()*100<[25,50,50,75][r];
     dots.push({
       px:sr*Math.cos(st), py:sy, pz:sr*Math.sin(st),
       h:h, ph:0.25-dir*pk*h/24, dir:dir,
-      oct:ROCT[r],
+      oct:(eff("oct")===1)?(blendHigh?1:0):ROCT[r],
       color:DOT_COLORS[Math.floor(rnd()*DOT_COLORS.length)], flash:-1e9
     });
     idx++;
@@ -688,7 +691,7 @@ var VALMAP={states:[3,4,5,6,7,8]};
 function pick(id,i){
   var k=KEYMAP[id];
   MAN[k]=VALMAP[k]?VALMAP[k][i]:i;
-  if(k==="harmony")buildDots();
+  if(k==="harmony"||k==="oct")buildDots();
   applyState(); syncUI(); refreshReadout();
 }
 function syncUI(){
