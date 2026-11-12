@@ -72,7 +72,6 @@
 
 <div class="sec" style="color:#2e6bff">LOOP</div>
 <div class="row" id="loopRow"></div>
-<div class="row"><button id="beatBtn">BASS BEAT · OFF</button></div>
 
 <div class="row" style="margin-top:18px">
   <button id="midiBtn">🎹 ENABLE MIDI OUT</button>
@@ -88,18 +87,18 @@
 <script>
 "use strict";
 /* ============================================================
-   MERGED AUDITION — Touring chassis + Tonal option span
-   Chassis: 99-dot sequencer — every dot blinks at an integer
-   harmonic of the loop frequency (h in {2,3,4,6,8,12}, dealt
-   freely per dot), peaks phase-locked to the 24-tick grid, top-2
-   strikes per tick, production pluck + 40ms flam + path filler,
-   harmony presets (weighted), 2-chord vamp
-   (change on tick 12), audition bass.
-   Folded in (tonal-audition): Interval Path + Contour + States as
-   the melody source (dots trigger, path orders the pitches), Second
-   Voice locked to Fifth above, Loop 27/36/45/54s, Root (12),
-   Octave band (C3/C4/C5), Voices (Pluck / Throat Song / Both).
-   Tuning is locked to Pythagorean.
+   HASH-SEED HARMONIC SYNTHESIZER — one hash deals one token.
+   99 dots on a Fibonacci sphere blink at integer harmonics of
+   the loop frequency (h in {2,3,4,6,8,12}, dealt freely per
+   dot), peaks phase-locked to the 24-tick grid; the top-2
+   strikes per tick play the hash-dealt pattern melody.
+   Locked for the series: voice Both (pluck + throat layered,
+   40ms flam on every strike), second voice a fifth above,
+   Pythagorean tuning at A=432Hz, the octave a C3-C4 blend
+   dealt per dot, loops consistent — the token holds its dealt
+   key and harmonic scale, strikes walk the melody frame by
+   fifths and reset each loop, the chord steps at the midpoint
+   when the fifth ring aligns. Loop 27/36/45s, root dealt (12).
    ============================================================ */
 
 function xmur3(str){var h=1779033703^str.length;for(var i=0;i<str.length;i++){h=Math.imul(h^str.charCodeAt(i),3432918353);h=h<<13|h>>>19;}return function(){h=Math.imul(h^(h>>>16),2246822507);h=Math.imul(h^(h>>>13),3266489909);return (h^=h>>>16)>>>0;};}
@@ -129,14 +128,6 @@ var PATHS=[
  {n:"Plateau",        gen:function(N){var s=[];for(var i=0;i<N;i++)s.push(Math.floor(i/2));return s;}},
  {n:"Random Walk",    gen:function(N){var rnd=mulberry32(xmur3(hash+"walk")()),s=[],d=2;for(var i=0;i<N;i++){s.push(d);d=Math.max(0,d+(rnd()<0.5?-1:1)*(rnd()<0.3?2:1));}return s;}}
 ];
-var SECONDS_T=[
- {n:"Degree down",  f:function(d,j){return d-1;}},
- {n:"Third above",  f:function(d,j){return d+2;}},
- {n:"Fifth above",  f:function(d,j){return d+4;}},
- {n:"Third below",  f:function(d,j){return d-2;}},
- {n:"Alternate",    f:function(d,j){return j%2===0?d+2:d-1;}}
-];
-var VOICES=["Pluck","Throat Song","Both"];
 var LOOPS=[27,36,45];
 var NAMES_S=["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
 var NAMES_F=["C","Db","D","Eb","E","F","Gb","G","Ab","A","Bb","B"];
@@ -158,15 +149,14 @@ PRESETS.forEach(function(p){
   var toks=p.names.split(" "), base=LETTERS.indexOf(toks[0].charAt(0));
   p.letOff=toks.map(function(tk){return (LETTERS.indexOf(tk.charAt(0))-base+7)%7;});
 });
-var JUST_R={0:1,1:16/15,2:9/8,3:6/5,4:5/4,5:4/3,6:45/32,7:3/2,8:8/5,9:5/3,10:9/5,11:15/8};
-function degCents(ti,letOff,semiFromRoot){
-  if(ti===0)return 0;
-  var sm=((semiFromRoot%12)+12)%12;
-  if(ti===1)return 1200*Math.log(JUST_R[sm])/Math.LN2-sm*100;
-  var fifth=ti===2?701.955:696.578, k;
+function degCents(letOff,semiFromRoot){
+  /* Pythagorean only — the series tuning, solved letter-exactly:
+     find the fifth-stack position k matching both the pitch class
+     and the letter offset, then read its cents against 12-TET */
+  var sm=((semiFromRoot%12)+12)%12, k;
   for(k=-12;k<=18;k++){
     if(((7*k)%12+12)%12===sm&&((4*k)%7+7)%7===letOff){
-      var c=(((k*fifth)%1200)+1200)%1200, off=c-sm*100;
+      var c=(((k*701.955)%1200)+1200)%1200, off=c-sm*100;
       if(off>600)off-=1200; if(off<=-600)off+=1200;
       return off;
     }
@@ -177,8 +167,8 @@ function degCents(ti,letOff,semiFromRoot){
 /* ---------- state ---------- */
 var hash=randHash();
 var noteInst={}, keyHit={};   /* pitch instances per loop, for visualizer cores */
-var S={harmony:0,tune:2,root:0,path:0,states:5,
-       loop:0,voice:2};
+var S={harmony:0,root:0,path:0,states:5,
+       loop:0};
 var MAN={};
 function eff(k){return MAN[k]!==undefined?MAN[k]:S[k];}
 function dealAll(h){
@@ -194,12 +184,12 @@ function dealAll(h){
 
 /* ---------- derived state ---------- */
 var preset=PRESETS[0], scaleLen=5, dots=[];
-var STEP=27/24, LOOP_SEC=27, seq=[], pathPtr=0, strikeCount=0;
+var STEP=27/24, LOOP_SEC=27, seq=[], pathPtr=0;
 /* circle-of-fifths layers: strikes walk the melody frame by
    fifths (reset each loop, so loops stay consistent), and h=3
-   fifth-ring strikes move the chord. playRoot/driftC are pinned
-   to the dealt root: no travel, no drift. */
-var walkF=0, chordHalf=0, loopChanges=0, playRoot=0, driftC=0, FIFTH_DEG=4;
+   fifth-ring strikes move the chord. The key is the dealt root:
+   no travel, no drift. */
+var walkF=0, chordHalf=0, playRoot=0, FIFTH_DEG=4;
 function fifthStepDeg(){ var iv=ladderIv(),best=1,bd=1e9; for(var d=1;d<=12;d++){ var dd=Math.abs(degToSemi(d,iv)-7); if(dd<bd){bd=dd;best=d;} } return best; }
 function baseMidi(){return 24+playRoot;}   /* series anchor: the C3 register — each dot's octave is dealt across C3-C4 in buildDots, locked for the series */
 function curScaleLen(){return preset.cents?preset.cents.length:preset.iv.length;}
@@ -259,21 +249,21 @@ function noteFreq(deg,ringOct,half){
   if(preset.cents){
     var L=preset.cents.length, ci=((deg%L)+L)%L, co=Math.floor(deg/L);
     var cTot=vr*100+preset.cents[ci]+co*1200+ringOct*1200;
-    var mf2=bm+cTot/100+driftC/100;
+    var mf2=bm+cTot/100;
     return {f:mtof(mf2), mf:mf2};
   }
   var semi=degToSemi(deg,preset.iv), tot=vr+semi;
   var L=preset.iv.length, vdi=preset.iv.indexOf(vr);
   var lo=(preset.letOff[((deg%L)+L)%L]+preset.letOff[vdi])%7;
-  var c=degCents(eff("tune"),lo,tot);
-  var mf3=bm+ringOct*12+tot+c/100+driftC/100;
+  var c=degCents(lo,tot);
+  var mf3=bm+ringOct*12+tot+c/100;
   return {f:mtof(mf3), mf:mf3};
 }
 function nameFor(pc,flat){return (flat?NAMES_F:NAMES_S)[((pc%12)+12)%12];}
 function vampRootName(half,rp){return nameFor((rp===undefined?eff("root"):rp)+preset.vamp[half],preset.flat);}
 
 /* ---------- synth ---------- */
-var ctx=null, master, dryBus, fxSend, t0aud=0, tickN=0, timer=0, playing=false, bassBeat=false;
+var ctx=null, master, dryBus, fxSend, t0aud=0, tickN=0, timer=0, playing=false;
 function mtof(mf){return 432*Math.pow(2,(mf-69)/12);}
 
 /* ---------- MIDI out (Web MIDI) ----------
@@ -316,11 +306,6 @@ function setupMIDI(){
   }, function(){ midiStatus("MIDI out: access denied"); });
 }
 document.getElementById("midiBtn").onclick=setupMIDI;
-document.getElementById("beatBtn").onclick=function(){
-  bassBeat=!bassBeat;
-  this.textContent=bassBeat?"BASS BEAT · ON":"BASS BEAT · OFF";
-  this.classList.toggle("on",bassBeat);
-};
 function initAudio(){
   ctx=new (window.AudioContext||window.webkitAudioContext)();
   /* mastering chain: master -> 24Hz cleanup -> glue comp -> limiter
@@ -383,27 +368,26 @@ function throatNote(f,vel,t){
   var se=ctx.createGain(); se.gain.value=0.55; g.connect(se); se.connect(fxSend);
   o.start(t); o.stop(t+4); o2.start(t); o2.stop(t+4); vib.start(t); vib.stop(t+4);
 }
-function voiceStrike(nf,vel,t,flam){
-  var v=eff("voice");
-  /* Both (v=2): pluck and throat layer on the same strike; the throat
-     overtone is trimmed so the stack leaves headroom for the pluck. */
-  if(v===1||v===2)throatNote(nf.f,vel*(v===2?0.85:1),t);
-  if(v===0||v===2){ if(flam)pluck(nf.mf,vel,t-0.04); pluck(nf.mf,vel,t); }
+function voiceStrike(nf,vel,t){
+  /* voice is locked to Both: pluck and throat layer on the same
+     strike (throat trimmed to 0.85 so the stack leaves headroom),
+     and every strike carries its 40ms flam */
+  throatNote(nf.f,vel*0.85,t);
+  pluck(nf.mf,vel,t-0.04); pluck(nf.mf,vel,t);
 }
-function bassNote(half,t,vol,dur){  /* soft root at chord change; vol/dur scale it for the offbeat pulse */
-  vol=vol||1; dur=dur||3;
+function bassNote(half,t){  /* soft root at chord change */
   var vr=preset.vamp[half], bc=0;
-  if(!preset.cents)bc=degCents(eff("tune"),preset.letOff[preset.iv.indexOf(vr)],vr);
-  var bmf=baseMidi()+vr+bc/100+driftC/100;
+  if(!preset.cents)bc=degCents(preset.letOff[preset.iv.indexOf(vr)],vr);
+  var bmf=baseMidi()+vr+bc/100;
   var f=mtof(bmf);
-  midiNote(bmf,0.55*vol,t,dur,2);
+  midiNote(bmf,0.55,t,3.0,2);
   var o=ctx.createOscillator(); o.type="sine"; o.frequency.value=f;
   var g=ctx.createGain();
   g.gain.setValueAtTime(0.0001,t);
-  g.gain.linearRampToValueAtTime(0.10*vol,t+dur/10);
-  g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  g.gain.linearRampToValueAtTime(0.10,t+0.3);
+  g.gain.exponentialRampToValueAtTime(0.0001,t+3.0);
   o.connect(g); g.connect(dryBus);
-  o.start(t); o.stop(t+dur+0.2);
+  o.start(t); o.stop(t+3.2);
   /* small-speaker support: a 2x harmonic at low gain. Phone drivers
      cannot move air at these 32-65Hz fundamentals — at high volume
      they only strain and buzz. The harmonic is reproducible, and
@@ -412,10 +396,10 @@ function bassNote(half,t,vol,dur){  /* soft root at chord change; vol/dur scale 
   var o2=ctx.createOscillator(); o2.type="sine"; o2.frequency.value=f*2;
   var g2=ctx.createGain();
   g2.gain.setValueAtTime(0.0001,t);
-  g2.gain.linearRampToValueAtTime(0.045*vol,t+dur/12);
-  g2.gain.exponentialRampToValueAtTime(0.0001,t+dur*0.733);
+  g2.gain.linearRampToValueAtTime(0.045,t+0.25);
+  g2.gain.exponentialRampToValueAtTime(0.0001,t+2.2);
   o2.connect(g2); g2.connect(dryBus);
-  o2.start(t); o2.stop(t+dur*0.8);
+  o2.start(t); o2.stop(t+2.4);
 }
 function nextDeg(){
   var d=seq[pathPtr%seq.length]; pathPtr++; return d;
@@ -425,10 +409,10 @@ function doStrike(dotIdx,vel,t,half,degOv){
   var deg=(degOv!==undefined)?degOv:nextDeg();
   deg+=walkF;   /* the circle walk: strikes keep stepping this frame */
   var nf=noteFreq(deg,d.oct,half);
-  voiceStrike(nf,vel,t,true);
+  voiceStrike(nf,vel,t);
   midiNote(nf.mf,vel,t-0.04,0.045,0); midiNote(nf.mf,vel,t,STEP,0);
-  var nf2=noteFreq(SECONDS_T[2].f(deg,strikeCount),d.oct,half);  /* second voice: Fifth above, locked */
-  voiceStrike(nf2,vel*0.6,t,true);
+  var nf2=noteFreq(deg+4,d.oct,half);  /* second voice: a fifth above, locked */
+  voiceStrike(nf2,vel*0.6,t);
   midiNote(nf2.mf,vel*0.6,t-0.04,0.045,1); midiNote(nf2.mf,vel*0.6,t,STEP,1);
   /* record pitch instances for the visualizer cores: pitch key ->
      {loop, dots that played it, last-hit time} */
@@ -438,7 +422,6 @@ function doStrike(dotIdx,vel,t,half,degOv){
     if(!e||e.loop!==lp){ e=noteInst[key]={loop:lp,dots:{}}; }
     e.dots[dotIdx]=1; keyHit[key]=t-t0aud;
   });
-  strikeCount++;
   d.flash=t-t0aud;
 }
 function scheduleTick(t,li){
@@ -448,7 +431,6 @@ function scheduleTick(t,li){
      +1 fifth per loop, comma accruing, was tried and removed
      2026-11-11 at Calvin's direction: consistent, not climbing.) */
   playRoot=eff("root");
-  driftC=0;
   var el=t-t0aud, cand=[];
   for(var i=0;i<dots.length;i++){
     var d=dots[i];
@@ -464,7 +446,7 @@ function scheduleTick(t,li){
     var nowEl=document.getElementById("now");
     if(nowEl)nowEl.innerHTML='loop <b>'+(lp+1)+'</b> · key <b>'+nameFor(playRoot,preset.flat)+'</b> · <b class="chord">'+vampRootName(chordHalf,playRoot)+'</b> <span class="note">('+preset.vampN+')</span>';
   }
-  if(li===0){ chordHalf=0; loopChanges=0; walkF=0; bassNote(0,t); nowLine(); }
+  if(li===0){ chordHalf=0; walkF=0; bassNote(0,t); nowLine(); }
   else if(li===12){
     /* the chord has exactly one decision point: the midpoint. If
        the fifth ring aligns there (at least 3 of the h=3 dots at
@@ -474,7 +456,7 @@ function scheduleTick(t,li){
     var ringN=0;
     for(var ri=0;ri<dots.length;ri++)if(dots[ri].h===3&&dotBright(dots[ri],el)>0.99)ringN++;
     if(ringN>=3){
-      chordHalf=1-chordHalf; loopChanges++;
+      chordHalf=1-chordHalf;
       bassNote(chordHalf,t); nowLine();
     }
   }
@@ -491,10 +473,6 @@ function scheduleTick(t,li){
   if(votes>0)walkF+=FIFTH_DEG; else if(votes<0)walkF-=FIFTH_DEG;
   if(walkF>2*FIFTH_DEG)walkF=4*FIFTH_DEG-walkF;
   if(walkF<-FIFTH_DEG)walkF=-2*FIFTH_DEG-walkF;
-  /* optional bass beat (player toggle): a pulse on the current
-     chord root halfway between ticks, every other tick — offset
-     against the strike pattern, giving the loop a backbeat */
-  if(bassBeat&&li%2===0)bassNote(chordHalf,t+STEP/2,1.0,1.1);
 }
 function pump(){
   if(!timer)return;
@@ -524,12 +502,6 @@ function draw(ts){
   var W=cv.width,H=cv.height,CX=W/2,CY=H/2,R=Math.min(W,H)/2;
   cx2d.fillStyle="#000"; cx2d.fillRect(0,0,W,H);
   var el=playing?(ctx.currentTime-t0aud):(performance.now()/1000%LOOP_SEC);
-  /* bass beat feedback: the button itself pulses (loop blue) in the
-     half-tick window after each offbeat bass pulse sounds */
-  var beatEl=document.getElementById("beatBtn");
-  if(beatEl){ var bph=(el/STEP)%2, blit=bassBeat&&playing&&bph>=0.5&&bph<0.95;
-    beatEl.style.boxShadow=blit?"0 0 14px #2e6bff":"";
-    beatEl.style.borderColor=blit?"#2e6bff":""; }
   /* The field lives on an invisible sphere (Fibonacci lattice),
      spinning about an axis halfway between its pole and the view
      axis: the ball rolls clockwise on screen while every dot cycles
@@ -709,11 +681,6 @@ function syncUI(){
   mkRow("statesRow",[3,4,5,6,7,8],eff("states")-3);
   buildLoopRow();
 }
-function thirdDetune(){
-  if(!preset.iv)return "n/a";
-  var c=degCents(eff("tune"),preset.letOff[2],preset.iv[2]);
-  return (c>=0?"+":"")+c.toFixed(1)+"¢";
-}
 function drawSeq(){
   var c=document.getElementById("seqCv"); if(!c||!seq.length)return;
   var g=c.getContext("2d"), W=c.width, H=c.height;
@@ -738,7 +705,7 @@ function drawSeq(){
   });
 }
 function refreshReadout(){
-  var manual=Object.keys(MAN).length>0, ti=eff("tune");
+  var manual=Object.keys(MAN).length>0;
   var pat=preset.iv?preset.iv.join(" "):preset.cents.join("¢ ")+"¢";
   var mel=PATHS[eff("path")].n+" · "+eff("states")+" notes <span class='note'>["+seq.join(" ")+"]</span>";
   document.getElementById("readout").innerHTML=
@@ -758,8 +725,8 @@ playBtn.onclick=function(){
   playing=!playing;
   if(playing){
     applyState();
-    t0aud=ctx.currentTime+0.1; tickN=0; pathPtr=0; strikeCount=0;
-    walkF=0; chordHalf=0; loopChanges=0;
+    t0aud=ctx.currentTime+0.1; tickN=0; pathPtr=0;
+    walkF=0; chordHalf=0;
     playBtn.textContent="⏸ STOP"; playBtn.classList.add("playing");
     timer=setTimeout(pump,50);
   }else{ playBtn.textContent="▶ PLAY"; playBtn.classList.remove("playing");
@@ -767,7 +734,7 @@ playBtn.onclick=function(){
 };
 document.getElementById("newBtn").onclick=function(){
   hash=randHash(); MAN={}; dealAll(hash);
-  walkF=0; chordHalf=0; loopChanges=0;
+  walkF=0; chordHalf=0;
   buildDots(); applyState(); syncUI(); refreshReadout();
 };
 
