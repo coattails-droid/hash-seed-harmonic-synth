@@ -504,7 +504,7 @@ function scheduleTick(t,li){
   /* optional bass beat (player toggle): a pulse on the current
      chord root halfway between ticks, every other tick — offset
      against the strike pattern, giving the loop a backbeat */
-  if(bassBeat&&li%2===0)bassNote(chordHalf,t+STEP/2,0.7,0.9);
+  if(bassBeat&&li%2===0)bassNote(chordHalf,t+STEP/2,1.0,1.1);
 }
 function pump(){
   if(!timer)return;
@@ -534,6 +534,12 @@ function draw(ts){
   var W=cv.width,H=cv.height,CX=W/2,CY=H/2,R=Math.min(W,H)/2;
   cx2d.fillStyle="#000"; cx2d.fillRect(0,0,W,H);
   var el=playing?(ctx.currentTime-t0aud):(performance.now()/1000%LOOP_SEC);
+  /* bass beat feedback: the button itself pulses (loop blue) in the
+     half-tick window after each offbeat bass pulse sounds */
+  var beatEl=document.getElementById("beatBtn");
+  if(beatEl){ var bph=(el/STEP)%2, blit=bassBeat&&playing&&bph>=0.5&&bph<0.95;
+    beatEl.style.boxShadow=blit?"0 0 14px #2e6bff":"";
+    beatEl.style.borderColor=blit?"#2e6bff":""; }
   /* The field lives on an invisible sphere (Fibonacci lattice),
      spinning about an axis halfway between its pole and the view
      axis: the ball rolls clockwise on screen while every dot cycles
