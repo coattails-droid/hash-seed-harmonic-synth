@@ -331,14 +331,26 @@ function setupMIDI(){
 document.getElementById("midiBtn").onclick=setupMIDI;
 function initAudio(){
   ctx=new (window.AudioContext||window.webkitAudioContext)();
-  /* mastering chain: master -> 24Hz cleanup -> glue comp -> brickwall limiter */
-  master=ctx.createGain(); master.gain.value=0.85;
+  /* mastering chain: master -> 24Hz cleanup -> glue comp -> limiter
+     -> soft clipper -> ceiling trim. A compressor limiter alone
+     leaks transients inside its attack window (flam clusters on
+     heartbeat-accent ticks overshot it and clipped phone DACs at
+     high volume), so a soft clipper that stays linear to -2.5dB and
+     only bends overshoot is the true final ceiling, and a -0.5dB
+     trim keeps the converter off the rail. */
+  master=ctx.createGain(); master.gain.value=0.75;
   var hp=ctx.createBiquadFilter(); hp.type="highpass"; hp.frequency.value=24; hp.Q.value=0.4;
   var cp=ctx.createDynamicsCompressor();
   cp.threshold.value=-18; cp.knee.value=18; cp.ratio.value=3; cp.attack.value=0.012; cp.release.value=0.24;
   var lim=ctx.createDynamicsCompressor();
-  lim.threshold.value=-2.5; lim.knee.value=0; lim.ratio.value=20; lim.attack.value=0.001; lim.release.value=0.2;
-  master.connect(hp); hp.connect(cp); cp.connect(lim); lim.connect(ctx.destination);
+  lim.threshold.value=-3.5; lim.knee.value=0; lim.ratio.value=20; lim.attack.value=0.0005; lim.release.value=0.2;
+  var clip=ctx.createWaveShaper(); clip.oversample="2x";
+  var curve=new Float32Array(1024), A=0.75;
+  for(var ci=0;ci<1024;ci++){ var x=ci/511.5-1, ax=Math.abs(x);
+    curve[ci]=ax<=A?x:Math.sign(x)*(A+(1-A)*Math.tanh((ax-A)/(1-A))); }
+  clip.curve=curve;
+  var ceil=ctx.createGain(); ceil.gain.value=0.94;
+  master.connect(hp); hp.connect(cp); cp.connect(lim); lim.connect(clip); clip.connect(ceil); ceil.connect(ctx.destination);
   dryBus=ctx.createGain(); dryBus.gain.value=0.85; dryBus.connect(master);
   fxSend=ctx.createGain(); fxSend.gain.value=1.0; fxSend.connect(master);
   var n=ctx.sampleRate,len=Math.floor(n*1.8),imp=ctx.createBuffer(1,len,n),d=imp.getChannelData(0);
