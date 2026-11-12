@@ -150,7 +150,7 @@ var SECONDS_T=[
  {n:"Alternate",    f:function(d,j){return j%2===0?d+2:d-1;}}
 ];
 var VOICES=["Pluck","Throat Song","Both"];
-var LOOPS=[27,36,45,54];
+var LOOPS=[27,36,45];
 var OCTAVES=["C3","C4","C5"];
 var NAMES_S=["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
 var NAMES_F=["C","Db","D","Eb","E","F","Gb","G","Ab","A","Bb","B"];
@@ -203,7 +203,7 @@ function dealAll(h){
   S.root=D("root",12); S.oct=D("oct",3);
   S.path=D("path",11); S.contour=0;   /* Shape locked to As-is at Calvin's direction — no Shape option */
   S.states=3+D("states",6);
-  S.loop=D("loop",4);
+  S.loop=D("loop",3);
 }
 
 /* ---------- derived state ---------- */
