@@ -123,22 +123,12 @@ var PATHS=[
  {n:"Stepwise Rise",  gen:function(N){var s=[];for(var i=0;i<N;i++)s.push(i);return s;}},
  {n:"Stepwise Fall",  gen:function(N){var s=[];for(var i=0;i<N;i++)s.push(N-1-i);return s;}},
  {n:"Pedal Tone",     gen:function(N){var s=[];for(var i=0;i<N;i++)s.push(i%2===0?0:(i+1)/2);return s;}},
- {n:"Fifths Ladder",  gen:function(N,L,iv){var s=[];for(var i=0;i<N;i++)s.push(nearestDeg(7*i,L,iv));return s;}},
  {n:"Valley",         gen:function(N){var s=[];for(var i=0;i<N;i++)s.push(Math.abs(N-1-2*i));return s;}},
  {n:"Wave",           gen:function(N){var s=[];for(var i=0;i<N;i++)s.push(Math.round(2+2*Math.sin(2*Math.PI*i/N)));return s;}},
  {n:"Zigzag",         gen:function(N){var s=[];for(var i=0;i<N;i++)s.push(i%2===0?i/2:3+(i-1)/2);return s;}},
  {n:"Plateau",        gen:function(N){var s=[];for(var i=0;i<N;i++)s.push(Math.floor(i/2));return s;}},
- {n:"Expander",       gen:function(N){var s=[];for(var i=0;i<N;i++)s.push(i*(i+1)/2);return s;}},
  {n:"Random Walk",    gen:function(N){var rnd=mulberry32(xmur3(hash+"walk")()),s=[],d=2;for(var i=0;i<N;i++){s.push(d);d=Math.max(0,d+(rnd()<0.5?-1:1)*(rnd()<0.3?2:1));}return s;}}
 ];
-function nearestDeg(semi,L,iv){
-  var best=0,bd=1e9;
-  for(var o=-1;o<=4;o++)for(var d=0;d<L;d++){
-    var v=iv[d]+12*o, dd=Math.abs(v-semi);
-    if(dd<bd){bd=dd;best=d+o*L;}
-  }
-  return best;
-}
 var SECONDS_T=[
  {n:"Degree down",  f:function(d,j){return d-1;}},
  {n:"Third above",  f:function(d,j){return d+2;}},
@@ -197,7 +187,7 @@ function dealAll(h){
   for(var i=0;i<PRESETS.length;i++){acc+=PRESETS[i].w;if(x<acc){hi=i;break;}}
   S.harmony=hi;
   S.root=D("root",12);
-  S.path=D("path",11);
+  S.path=D("path",9);
   S.states=3+D("states",6);
   S.loop=D("loop",3);
 }
