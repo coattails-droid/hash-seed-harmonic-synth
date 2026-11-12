@@ -60,8 +60,6 @@
 
 <div class="sec" style="color:#b6ff00">PITCH</div>
 <div class="row" id="rootRow"></div>
-<div class="sec" style="color:#8a8578;font-size:10px;margin-top:10px;">OCTAVE</div>
-<div class="row" id="octRow"></div>
 
 <div class="sec" style="color:#00ff66">HARMONY</div>
 <div class="row" id="harmRow"></div>
@@ -149,10 +147,9 @@ var SECONDS_T=[
 ];
 var VOICES=["Pluck","Throat Song","Both"];
 var LOOPS=[27,36,45];
-var OCTAVES=["C3","C3–C4","C4"];
 var NAMES_S=["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
 var NAMES_F=["C","Db","D","Eb","E","F","Gb","G","Ab","A","Bb","B"];
-var RING_N=[12,33,33,21], RING_R=[0.17,0.40,0.60,0.82], ROCT=[0,1,1,2];
+var RING_N=[12,33,33,21], RING_R=[0.17,0.40,0.60,0.82];
 /* Tidal Geometries' six neon dot colors — the accent field, fixed across that series */
 var DOT_COLORS=["#b6ff00","#00ff66","#00f0ff","#2e6bff","#8b2bff","#ff2bd6"];
 var PRESET_COLORS=["#b6ff00","#00ff66","#00f0ff","#2e6bff","#8b2bff","#ff2bd6","#b6ff00"];
@@ -189,7 +186,7 @@ function degCents(ti,letOff,semiFromRoot){
 /* ---------- state ---------- */
 var hash=randHash();
 var noteInst={}, keyHit={};   /* pitch instances per loop, for visualizer cores */
-var S={harmony:0,tune:2,root:0,oct:1,path:0,states:5,
+var S={harmony:0,tune:2,root:0,path:0,states:5,
        loop:0,voice:2};
 var MAN={};
 function eff(k){return MAN[k]!==undefined?MAN[k]:S[k];}
@@ -198,7 +195,7 @@ function dealAll(h){
   var x=(parseInt(h.slice(0,2),16)/256)*100,acc=0,hi=0;
   for(var i=0;i<PRESETS.length;i++){acc+=PRESETS[i].w;if(x<acc){hi=i;break;}}
   S.harmony=hi;
-  S.root=D("root",12); S.oct=D("oct",3);
+  S.root=D("root",12);
   S.path=D("path",11);
   S.states=3+D("states",6);
   S.loop=D("loop",3);
@@ -213,7 +210,7 @@ var STEP=27/24, LOOP_SEC=27, seq=[], pathPtr=0, strikeCount=0;
    to the dealt root: no travel, no drift. */
 var walkF=0, chordHalf=0, loopChanges=0, playRoot=0, driftC=0, FIFTH_DEG=4;
 function fifthStepDeg(){ var iv=ladderIv(),best=1,bd=1e9; for(var d=1;d<=12;d++){ var dd=Math.abs(degToSemi(d,iv)-7); if(dd<bd){bd=dd;best=d;} } return best; }
-function baseMidi(){return 38+(playRoot-2)+12*([-1,-1,0][eff("oct")]);}   /* anchors: C3 and the C3-C4 blend sit at the C3 register, C4 one octave up; C5 is gone */
+function baseMidi(){return 24+playRoot;}   /* series anchor: the C3 register — each dot's octave is dealt across C3-C4 in buildDots, locked for the series */
 function curScaleLen(){return preset.cents?preset.cents.length:preset.iv.length;}
 function ladderIv(){
   if(preset.iv)return preset.iv;
@@ -248,13 +245,13 @@ function buildDots(){
     /* Fibonacci sphere: the phyllotaxis spiral wrapped on a ball —
        even height steps, golden-angle turns */
     var sy=1-2*(idx+0.5)/99, sr=Math.sqrt(Math.max(0,1-sy*sy)), st=idx*GA;
-    /* blend mode (octave = C3-C4): each dot's register is dealt —
-       inner rings favor the low register, outer rings the high */
+    /* the series octave is the C3-C4 blend: each dot's register is
+       dealt — inner rings favor the low register, outer rings high */
     var blendHigh=rnd()*100<[25,50,50,75][r];
     dots.push({
       px:sr*Math.cos(st), py:sy, pz:sr*Math.sin(st),
       h:h, ph:0.25-dir*pk*h/24, dir:dir,
-      oct:(eff("oct")===1)?(blendHigh?1:0):ROCT[r],
+      oct:blendHigh?1:0,
       color:DOT_COLORS[Math.floor(rnd()*DOT_COLORS.length)], flash:-1e9
     });
     idx++;
@@ -633,22 +630,6 @@ function buildKeyboard(){
   });
   el.appendChild(kb);
 }
-function buildOctRow(){
-  var el=document.getElementById("octRow"); el.innerHTML="";
-  OCTAVES.forEach(function(name,i){
-    var b=document.createElement("button");
-    b.classList.add("vbtn");
-    if(i===eff("oct"))b.classList.add("on");
-    var bars="";
-    for(var j=0;j<3;j++){
-      var h=[7,12,17][j];
-      bars+='<rect x="'+(4+j*9)+'" y="'+(20-h)+'" width="6" height="'+h+'" fill="'+(j<=i?"#00f0ff":"#3a3a3a")+'"/>';
-    }
-    b.innerHTML='<svg width="34" height="22">'+bars+'</svg><div>'+name+'</div>';
-    b.onclick=function(){pick("octRow",i);};
-    el.appendChild(b);
-  });
-}
 function clockSVG(p,i){
   var col=PRESET_COLORS[i];
   var tones=p.iv?p.iv.map(function(s){return s/12;}):p.cents.map(function(c){return c/1200;});
@@ -685,18 +666,17 @@ function buildLoopRow(){
     el.appendChild(b);
   });
 }
-var KEYMAP={rootRow:"root",octRow:"oct",harmRow:"harmony",
+var KEYMAP={rootRow:"root",harmRow:"harmony",
   pathRow:"path",statesRow:"states",loopRow:"loop"};
 var VALMAP={states:[3,4,5,6,7,8]};
 function pick(id,i){
   var k=KEYMAP[id];
   MAN[k]=VALMAP[k]?VALMAP[k][i]:i;
-  if(k==="harmony"||k==="oct")buildDots();
+  if(k==="harmony")buildDots();
   applyState(); syncUI(); refreshReadout();
 }
 function syncUI(){
   buildKeyboard();
-  buildOctRow();
   buildHarmRow();
   mkRow("pathRow",PATHS.map(function(p){return p.n;}),eff("path"));
   mkRow("statesRow",[3,4,5,6,7,8],eff("states")-3);
@@ -736,7 +716,7 @@ function refreshReadout(){
   var mel=PATHS[eff("path")].n+" · "+eff("states")+" notes <span class='note'>["+seq.join(" ")+"]</span>";
   document.getElementById("readout").innerHTML=
     'token <b>'+hash.slice(0,12)+'…</b> '+(manual?'<span class="note">(manual override)</span>':'<span class="note">(hash-dealt)</span>')+'<br>'+
-    'Root <b class="trait">'+nameFor(eff("root"),preset.flat)+'</b> · '+OCTAVES[eff("oct")]+'<br>'+
+    'Root <b class="trait">'+nameFor(eff("root"),preset.flat)+'</b> · C3–C4<br>'+
     'harmony <b class="trait">'+preset.n+'</b> <span class="wt">'+preset.w+'%</span> · scale <b>'+pat+'</b> <span class="note">(at D: '+preset.names+')</span><br>'+
     'vamp <b class="chord">'+vampRootName(0)+' → '+vampRootName(1)+'</b> <span class="note">('+preset.vampN+')</span><br>'+
     'heartbeat <b class="trait">'+hbName+'</b> <span class="note">50/30/20</span><br>'+
