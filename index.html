@@ -98,7 +98,9 @@
    dealt per dot, loops consistent — the token holds its dealt
    key and harmonic scale, strikes walk the melody frame by
    fifths and reset each loop, the chord steps at the midpoint
-   when the fifth ring aligns. Loop 27/36/45s, root dealt (12).
+   when the fifth ring aligns. Loops are heartbeat tempos —
+   105 / 82.5 / 60 BPM at one tick per beat (13.7 / 17.5 / 24s),
+   root dealt (12).
    ============================================================ */
 
 function xmur3(str){var h=1779033703^str.length;for(var i=0;i<str.length;i++){h=Math.imul(h^str.charCodeAt(i),3432918353);h=h<<13|h>>>19;}return function(){h=Math.imul(h^(h>>>16),2246822507);h=Math.imul(h^(h>>>13),3266489909);return (h^=h>>>16)>>>0;};}
@@ -128,7 +130,7 @@ var PATHS=[
  {n:"Plateau",        gen:function(N){var s=[];for(var i=0;i<N;i++)s.push(Math.floor(i/2));return s;}},
  {n:"Random Walk",    gen:function(N){var rnd=mulberry32(xmur3(hash+"walk")()),s=[],d=2;for(var i=0;i<N;i++){s.push(d);d=Math.max(0,d+(rnd()<0.5?-1:1)*(rnd()<0.3?2:1));}return s;}}
 ];
-var LOOPS=[27,36,45];
+var LOOPS=[105,82.5,60];  /* loop trait = tempo in BPM (Touring's heartbeat rates), one tick per beat, 24 ticks per loop: 13.71s / 17.45s / 24s */
 var NAMES_S=["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
 var NAMES_F=["C","Db","D","Eb","E","F","Gb","G","Ab","A","Bb","B"];
 var RING_N=[12,33,33,21], RING_R=[0.17,0.40,0.60,0.82];
@@ -184,7 +186,7 @@ function dealAll(h){
 
 /* ---------- derived state ---------- */
 var preset=PRESETS[0], scaleLen=5, dots=[];
-var STEP=27/24, LOOP_SEC=27, seq=[], pathPtr=0;
+var STEP=1440/105/24, LOOP_SEC=1440/105, seq=[], pathPtr=0;
 /* circle-of-fifths layers: strikes walk the melody frame by
    fifths (reset each loop, so loops stay consistent), and h=3
    fifth-ring strikes move the chord. The key is the dealt root:
@@ -205,7 +207,7 @@ function buildSeq(){
 function applyState(){
   preset=PRESETS[eff("harmony")];
   scaleLen=curScaleLen();
-  LOOP_SEC=LOOPS[eff("loop")]; STEP=LOOP_SEC/24;
+  LOOP_SEC=1440/LOOPS[eff("loop")]; STEP=LOOP_SEC/24;
   seq=buildSeq(); pathPtr=0;
   FIFTH_DEG=fifthStepDeg();
   if(!playing)playRoot=eff("root");
@@ -655,12 +657,12 @@ function buildHarmRow(){
 }
 function buildLoopRow(){
   var el=document.getElementById("loopRow"); el.innerHTML="";
-  LOOPS.forEach(function(sec,i){
+  LOOPS.forEach(function(bpm,i){
     var b=document.createElement("button");
     b.classList.add("vbtn");
     if(i===eff("loop"))b.classList.add("on");
-    var wpx=Math.round(sec/54*76);
-    b.innerHTML='<div>'+sec+'s</div><div class="track" style="width:76px"><div class="fill" style="width:'+wpx+'px;background:'+DOT_COLORS[i%DOT_COLORS.length]+'"></div></div>';
+    var wpx=Math.round(bpm/105*76);
+    b.innerHTML='<div>'+bpm+' BPM</div><div class="track" style="width:76px"><div class="fill" style="width:'+wpx+'px;background:'+DOT_COLORS[i%DOT_COLORS.length]+'"></div></div>';
     b.onclick=function(){pick("loopRow",i);};
     el.appendChild(b);
   });
@@ -714,7 +716,7 @@ function refreshReadout(){
     'harmony <b class="trait">'+preset.n+'</b> <span class="wt">'+preset.w+'%</span> · scale <b>'+pat+'</b> <span class="note">(at D: '+preset.names+')</span><br>'+
     'vamp <b class="chord">'+vampRootName(0)+' → '+vampRootName(1)+'</b> <span class="note">('+preset.vampN+')</span><br>'+
     'melody <b class="trait">'+mel+'</b><br>'+
-    'loop <b class="trait">'+LOOP_SEC+'s</b><br>'+
+    'loop <b class="trait">'+LOOPS[eff("loop")]+' BPM</b> <span class="note">('+LOOP_SEC.toFixed(1)+'s)</span><br>'+
     '<span id="now"></span>';
   drawSeq();
 }
