@@ -411,6 +411,18 @@ function bassNote(half,t){  /* audition-only soft root at chord change */
   g.gain.exponentialRampToValueAtTime(0.0001,t+3.0);
   o.connect(g); g.connect(dryBus);
   o.start(t); o.stop(t+3.2);
+  /* small-speaker support: a 2x harmonic at low gain. Phone drivers
+     cannot move air at these 32-65Hz fundamentals — at high volume
+     they only strain and buzz. The harmonic is reproducible, and
+     the ear reconstructs the root from it (missing fundamental);
+     on full-range speakers it just adds definition to the root. */
+  var o2=ctx.createOscillator(); o2.type="sine"; o2.frequency.value=f*2;
+  var g2=ctx.createGain();
+  g2.gain.setValueAtTime(0.0001,t);
+  g2.gain.linearRampToValueAtTime(0.045,t+0.25);
+  g2.gain.exponentialRampToValueAtTime(0.0001,t+2.2);
+  o2.connect(g2); g2.connect(dryBus);
+  o2.start(t); o2.stop(t+2.4);
 }
 function nextDeg(){
   var d=seq[pathPtr%seq.length]; pathPtr++; return d;
