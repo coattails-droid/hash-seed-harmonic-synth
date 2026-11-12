@@ -207,7 +207,12 @@ function dealAll(h){
 /* ---------- derived state ---------- */
 var preset=PRESETS[0], scaleLen=5, dots=[], hbK=2/3, hbName="";
 var STEP=27/24, LOOP_SEC=27, seq=[], pathPtr=0, strikeCount=0;
-function baseMidi(){return 38+(eff("root")-2)+12*(eff("oct")-1);}
+/* circle-of-fifths layers: the root travels +1 fifth per loop (the
+   Pythagorean comma accruing as drift), strikes walk the melody
+   frame by fifths, and h=3 fifth-ring strikes move the chord */
+var walkF=0, chordHalf=0, loopChanges=0, playRoot=2, driftC=0, FIFTH_DEG=4;
+function fifthStepDeg(){ var iv=ladderIv(),best=1,bd=1e9; for(var d=1;d<=12;d++){ var dd=Math.abs(degToSemi(d,iv)-7); if(dd<bd){bd=dd;best=d;} } return best; }
+function baseMidi(){return 38+(playRoot-2)+12*(eff("oct")-1);}
 function curScaleLen(){return preset.cents?preset.cents.length:preset.iv.length;}
 function ladderIv(){
   if(preset.iv)return preset.iv;
@@ -228,6 +233,8 @@ function applyState(){
   hbName=hb<5?"resting 60":hb<8?"active 82.5":"racing 105";
   LOOP_SEC=LOOPS[eff("loop")]; STEP=LOOP_SEC/24;
   seq=buildSeq(); pathPtr=0;
+  FIFTH_DEG=fifthStepDeg();
+  if(!playing)playRoot=eff("root");
 }
 var HARMS=[2,3,4,6,8,12];
 var GA=Math.PI*(3-Math.sqrt(5));   /* golden angle: phyllotaxis spiral */
@@ -265,18 +272,18 @@ function noteFreq(deg,ringOct,half){
   if(preset.cents){
     var L=preset.cents.length, ci=((deg%L)+L)%L, co=Math.floor(deg/L);
     var cTot=vr*100+preset.cents[ci]+co*1200+ringOct*1200;
-    var mf2=bm+cTot/100;
+    var mf2=bm+cTot/100+driftC/100;
     return {f:mtof(mf2), mf:mf2};
   }
   var semi=degToSemi(deg,preset.iv), tot=vr+semi;
   var L=preset.iv.length, vdi=preset.iv.indexOf(vr);
   var lo=(preset.letOff[((deg%L)+L)%L]+preset.letOff[vdi])%7;
   var c=degCents(eff("tune"),lo,tot);
-  var mf3=bm+ringOct*12+tot+c/100;
+  var mf3=bm+ringOct*12+tot+c/100+driftC/100;
   return {f:mtof(mf3), mf:mf3};
 }
 function nameFor(pc,flat){return (flat?NAMES_F:NAMES_S)[((pc%12)+12)%12];}
-function vampRootName(half){return nameFor(eff("root")+preset.vamp[half],preset.flat);}
+function vampRootName(half,rp){return nameFor((rp===undefined?eff("root"):rp)+preset.vamp[half],preset.flat);}
 
 /* ---------- synth ---------- */
 var ctx=null, master, dryBus, fxSend, t0aud=0, tickN=0, timer=0, playing=false;
@@ -382,8 +389,9 @@ function voiceStrike(nf,vel,t,flam){
 function bassNote(half,t){  /* audition-only soft root at chord change */
   var vr=preset.vamp[half], bc=0;
   if(!preset.cents)bc=degCents(eff("tune"),preset.letOff[preset.iv.indexOf(vr)],vr);
-  var f=mtof(baseMidi()+vr+bc/100);
-  midiNote(baseMidi()+vr+bc/100,0.55,t,3.0,2);
+  var bmf=baseMidi()+vr+bc/100+driftC/100;
+  var f=mtof(bmf);
+  midiNote(bmf,0.55,t,3.0,2);
   var o=ctx.createOscillator(); o.type="sine"; o.frequency.value=f;
   var g=ctx.createGain();
   g.gain.setValueAtTime(0.0001,t);
@@ -398,6 +406,7 @@ function nextDeg(){
 function doStrike(dotIdx,vel,t,half,degOv){
   var d=dots[dotIdx];
   var deg=(degOv!==undefined)?degOv:nextDeg();
+  deg+=walkF;   /* the circle walk: strikes keep stepping this frame */
   var nf=noteFreq(deg,d.oct,half);
   voiceStrike(nf,vel,t,true);
   midiNote(nf.mf,vel,t-0.04,0.045,0); midiNote(nf.mf,vel,t,STEP,0);
@@ -416,12 +425,11 @@ function doStrike(dotIdx,vel,t,half,degOv){
   d.flash=t-t0aud;
 }
 function scheduleTick(t,li){
-  var half=li<12?0:1;
-  if(li===0||li===12){
-    bassNote(half,t);
-    var nowEl=document.getElementById("now");
-    if(nowEl)nowEl.innerHTML='half <b>'+(half+1)+'/2</b> · <b class="chord">'+vampRootName(half)+'</b> <span class="note">('+preset.vampN+')</span>';
-  }
+  var lp=Math.floor((t-t0aud)/LOOP_SEC);
+  /* layer 1 — form: the root travels +1 fifth per loop; the comma
+     (a pure fifth is 1.955c wider than the 12-TET fifth) accrues */
+  playRoot=((eff("root")+7*lp)%12+12)%12;
+  driftC=lp*1.955;
   var el=t-t0aud, cand=[];
   for(var i=0;i<dots.length;i++){
     var d=dots[i];
@@ -433,12 +441,40 @@ function scheduleTick(t,li){
     if(b>0.88)cand.push({i:i,b:b+(cyrb53(hash+"tie"+li+"_"+i)%1000)/1000*0.005});
   }
   cand.sort(function(a,b){return b.b-a.b;});
-  var sw=((li*hbK)%1)<0.2?2.2:0.7;
-  if(cand.length){
-    for(var k=0;k<Math.min(2,cand.length);k++)doStrike(cand[k].i,0.9*sw,t,half);
-  }else{
-    doStrike(cyrb53(hash+"fl"+li)%dots.length,0.3*sw,t,half,nextDeg());
+  function nowLine(){
+    var nowEl=document.getElementById("now");
+    if(nowEl)nowEl.innerHTML='loop <b>'+(lp+1)+'</b> · key <b>'+nameFor(playRoot,preset.flat)+'</b> · <b class="chord">'+vampRootName(chordHalf,playRoot)+'</b> <span class="note">('+preset.vampN+')</span>';
   }
+  if(li===0){ chordHalf=0; loopChanges=0; bassNote(0,t); nowLine(); }
+  else if(li===6||li===12||li===18){
+    /* layer 6 — trigger: the fifth ring. The chord steps when the
+       ring aligns: at least 3 of the h=3 dots (the 3-against-2 dots)
+       at exact peak on the boundary tick. Brightness races are
+       structurally won by the h=12 dots, so the ring speaks by
+       unison, not by winning. The alignment is loop-periodic, which
+       makes each token's harmonic rhythm a dealt trait. The old
+       midpoint (12) still changes if nothing has — the vamp keeps
+       its two-chord identity. */
+    var ringN=0;
+    for(var ri=0;ri<dots.length;ri++)if(dots[ri].h===3&&dotBright(dots[ri],el)>0.99)ringN++;
+    if(ringN>=3||(li===12&&loopChanges===0)){
+      chordHalf=1-chordHalf; loopChanges++;
+      bassNote(chordHalf,t); nowLine();
+    }
+  }
+  var sw=((li*hbK)%1)<0.2?2.2:0.7, votes=0;
+  if(cand.length){
+    for(var k=0;k<Math.min(2,cand.length);k++){ doStrike(cand[k].i,0.9*sw,t,chordHalf); votes+=dots[cand[k].i].dir; }
+  }else{
+    var fi2=cyrb53(hash+"fl"+li)%dots.length;
+    doStrike(fi2,0.3*sw,t,chordHalf,nextDeg()); votes+=dots[fi2].dir;
+  }
+  /* layer 2 — notes: the tick's strikes vote the melody frame one
+     fifth up or down the circle (a tie holds); reflected inside
+     [-1, +2] fifths of home so it wanders without leaving home */
+  if(votes>0)walkF+=FIFTH_DEG; else if(votes<0)walkF-=FIFTH_DEG;
+  if(walkF>2*FIFTH_DEG)walkF=4*FIFTH_DEG-walkF;
+  if(walkF<-FIFTH_DEG)walkF=-2*FIFTH_DEG-walkF;
 }
 function pump(){
   if(!timer)return;
@@ -699,7 +735,7 @@ function refreshReadout(){
     'token <b>'+hash.slice(0,12)+'…</b> '+(manual?'<span class="note">(manual override)</span>':'<span class="note">(hash-dealt)</span>')+'<br>'+
     'Root <b class="trait">'+nameFor(eff("root"),preset.flat)+'</b> · '+OCTAVES[eff("oct")]+'<br>'+
     'harmony <b class="trait">'+preset.n+'</b> <span class="wt">'+preset.w+'%</span> · scale <b>'+pat+'</b> <span class="note">(at D: '+preset.names+')</span><br>'+
-    'vamp <b class="chord">'+vampRootName(0)+' → '+vampRootName(1)+'</b> <span class="note">('+preset.vampN+', half + half)</span><br>'+
+    'vamp <b class="chord">'+vampRootName(0)+' → '+vampRootName(1)+'</b> <span class="note">('+preset.vampN+')</span><br>'+
     'heartbeat <b class="trait">'+hbName+'</b> <span class="note">50/30/20</span><br>'+
     'melody <b class="trait">'+mel+'</b><br>'+
     'loop <b class="trait">'+LOOP_SEC+'s</b><br>'+
@@ -714,6 +750,7 @@ playBtn.onclick=function(){
   if(playing){
     applyState();
     t0aud=ctx.currentTime+0.1; tickN=0; pathPtr=0; strikeCount=0;
+    walkF=0; chordHalf=0; loopChanges=0;
     playBtn.textContent="⏸ STOP"; playBtn.classList.add("playing");
     timer=setTimeout(pump,50);
   }else{ playBtn.textContent="▶ PLAY"; playBtn.classList.remove("playing");
@@ -721,6 +758,7 @@ playBtn.onclick=function(){
 };
 document.getElementById("newBtn").onclick=function(){
   hash=randHash(); MAN={}; dealAll(hash);
+  walkF=0; chordHalf=0; loopChanges=0;
   buildDots(); applyState(); syncUI(); refreshReadout();
 };
 
