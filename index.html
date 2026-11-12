@@ -732,6 +732,10 @@ playBtn.onclick=function(){
   }else{ playBtn.textContent="▶ PLAY"; playBtn.classList.remove("playing");
     if(timer){clearTimeout(timer);timer=0;} }
 };
+/* leaving the tab stops the music — no background playback */
+document.addEventListener("visibilitychange",function(){
+  if(document.hidden&&playing)playBtn.onclick();
+});
 document.getElementById("newBtn").onclick=function(){
   hash=randHash(); MAN={}; dealAll(hash);
   walkF=0; chordHalf=0;
