@@ -92,8 +92,8 @@
    Chassis: 99-dot sequencer — every dot blinks at an integer
    harmonic of the loop frequency (h in {2,3,4,6,8,12}, dealt
    freely per dot), peaks phase-locked to the 24-tick grid, top-2
-   strikes per tick, production pluck + 40ms flam + heartbeat
-   swell + path filler, harmony presets (weighted), 2-chord vamp
+   strikes per tick, production pluck + 40ms flam + path filler,
+   harmony presets (weighted), 2-chord vamp
    (change on tick 12), audition bass.
    Folded in (tonal-audition): Interval Path + Contour + States as
    the melody source (dots trigger, path orders the pitches), Second
@@ -203,7 +203,7 @@ function dealAll(h){
 }
 
 /* ---------- derived state ---------- */
-var preset=PRESETS[0], scaleLen=5, dots=[], hbK=4, hbName="";
+var preset=PRESETS[0], scaleLen=5, dots=[];
 var STEP=27/24, LOOP_SEC=27, seq=[], pathPtr=0, strikeCount=0;
 /* circle-of-fifths layers: strikes walk the melody frame by
    fifths (reset each loop, so loops stay consistent), and h=3
@@ -225,10 +225,6 @@ function buildSeq(){
 function applyState(){
   preset=PRESETS[eff("harmony")];
   scaleLen=curScaleLen();
-  var fs=cyrb53(hash+"av");
-  var hb=fs%10;
-  hbK=hb<5?4:hb<8?3:2;   /* heartbeat = accent period in ticks: resting every 4th, active every 3rd, racing every 2nd */
-  hbName=hb<5?"resting 60":hb<8?"active 82.5":"racing 105";
   LOOP_SEC=LOOPS[eff("loop")]; STEP=LOOP_SEC/24;
   seq=buildSeq(); pathPtr=0;
   FIFTH_DEG=fifthStepDeg();
@@ -492,12 +488,12 @@ function scheduleTick(t,li){
       bassNote(chordHalf,t); nowLine();
     }
   }
-  var sw=(li%hbK===0)?2.2:0.7, votes=0;
+  var votes=0;
   if(cand.length){
-    for(var k=0;k<Math.min(2,cand.length);k++){ doStrike(cand[k].i,0.9*sw,t,chordHalf); votes+=dots[cand[k].i].dir; }
+    for(var k=0;k<Math.min(2,cand.length);k++){ doStrike(cand[k].i,0.9,t,chordHalf); votes+=dots[cand[k].i].dir; }
   }else{
     var fi2=cyrb53(hash+"fl"+li)%dots.length;
-    doStrike(fi2,0.3*sw,t,chordHalf,nextDeg()); votes+=dots[fi2].dir;
+    doStrike(fi2,0.9,t,chordHalf,nextDeg()); votes+=dots[fi2].dir;
   }
   /* layer 2 — notes: the tick's strikes vote the melody frame one
      fifth up or down the circle (a tie holds); reflected inside
@@ -754,7 +750,6 @@ function refreshReadout(){
     'Root <b class="trait">'+nameFor(eff("root"),preset.flat)+'</b> · C3–C4<br>'+
     'harmony <b class="trait">'+preset.n+'</b> <span class="wt">'+preset.w+'%</span> · scale <b>'+pat+'</b> <span class="note">(at D: '+preset.names+')</span><br>'+
     'vamp <b class="chord">'+vampRootName(0)+' → '+vampRootName(1)+'</b> <span class="note">('+preset.vampN+')</span><br>'+
-    'heartbeat <b class="trait">'+hbName+'</b> <span class="note">50/30/20</span><br>'+
     'melody <b class="trait">'+mel+'</b><br>'+
     'loop <b class="trait">'+LOOP_SEC+'s</b><br>'+
     '<span id="now"></span>';
