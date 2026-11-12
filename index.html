@@ -205,7 +205,7 @@ function dealAll(h){
 }
 
 /* ---------- derived state ---------- */
-var preset=PRESETS[0], scaleLen=5, dots=[], hbK=2/3, hbName="";
+var preset=PRESETS[0], scaleLen=5, dots=[], hbK=4, hbName="";
 var STEP=27/24, LOOP_SEC=27, seq=[], pathPtr=0, strikeCount=0;
 /* circle-of-fifths layers: strikes walk the melody frame by
    fifths (reset each loop, so loops stay consistent), and h=3
@@ -229,7 +229,7 @@ function applyState(){
   scaleLen=curScaleLen();
   var fs=cyrb53(hash+"av");
   var hb=fs%10;
-  hbK=hb<5?2/3:hb<8?11/12:7/6;
+  hbK=hb<5?4:hb<8?3:2;   /* heartbeat = accent period in ticks: resting every 4th, active every 3rd, racing every 2nd */
   hbName=hb<5?"resting 60":hb<8?"active 82.5":"racing 105";
   LOOP_SEC=LOOPS[eff("loop")]; STEP=LOOP_SEC/24;
   seq=buildSeq(); pathPtr=0;
@@ -448,23 +448,20 @@ function scheduleTick(t,li){
     if(nowEl)nowEl.innerHTML='loop <b>'+(lp+1)+'</b> · key <b>'+nameFor(playRoot,preset.flat)+'</b> · <b class="chord">'+vampRootName(chordHalf,playRoot)+'</b> <span class="note">('+preset.vampN+')</span>';
   }
   if(li===0){ chordHalf=0; loopChanges=0; walkF=0; bassNote(0,t); nowLine(); }
-  else if(li===6||li===12||li===18){
-    /* layer 6 — trigger: the fifth ring. The chord steps when the
-       ring aligns: at least 3 of the h=3 dots (the 3-against-2 dots)
-       at exact peak on the boundary tick. Brightness races are
-       structurally won by the h=12 dots, so the ring speaks by
-       unison, not by winning. The alignment is loop-periodic, which
-       makes each token's harmonic rhythm a dealt trait. The old
-       midpoint (12) still changes if nothing has — the vamp keeps
-       its two-chord identity. */
+  else if(li===12){
+    /* the chord has exactly one decision point: the midpoint. If
+       the fifth ring aligns there (at least 3 of the h=3 dots at
+       exact peak), the chord steps and the bass follows; otherwise
+       one chord holds the whole loop. The alignment is loop-
+       periodic, so each token's answer is a dealt trait. */
     var ringN=0;
     for(var ri=0;ri<dots.length;ri++)if(dots[ri].h===3&&dotBright(dots[ri],el)>0.99)ringN++;
-    if(ringN>=3||(li===12&&loopChanges===0)){
+    if(ringN>=3){
       chordHalf=1-chordHalf; loopChanges++;
       bassNote(chordHalf,t); nowLine();
     }
   }
-  var sw=((li*hbK)%1)<0.2?2.2:0.7, votes=0;
+  var sw=(li%hbK===0)?2.2:0.7, votes=0;
   if(cand.length){
     for(var k=0;k<Math.min(2,cand.length);k++){ doStrike(cand[k].i,0.9*sw,t,chordHalf); votes+=dots[cand[k].i].dir; }
   }else{
@@ -507,11 +504,13 @@ function draw(ts){
   cx2d.fillStyle="#000"; cx2d.fillRect(0,0,W,H);
   var el=playing?(ctx.currentTime-t0aud):(performance.now()/1000%LOOP_SEC);
   /* The field lives on an invisible sphere (Fibonacci lattice),
-     spinning at 7 deg/s about an axis halfway between its pole and
-     the view axis: the ball rolls clockwise on screen while every
-     dot cycles between the near and far side. Project each dot,
-     thread the spiral by depth, paint far side first. */
-  var spin=-(playing?(ctx.currentTime-t0aud):performance.now()/1000)*0.122173;  /* 7 deg/s */
+     spinning about an axis halfway between its pole and the view
+     axis: the ball rolls clockwise on screen while every dot cycles
+     between the near and far side. One revolution per loop, so the
+     sphere returns to its starting orientation as the music does.
+     Project each dot, thread the spiral by depth, paint far side
+     first. */
+  var spin=-(playing?(ctx.currentTime-t0aud):performance.now()/1000)*(Math.PI*2/LOOP_SEC);  /* one revolution per loop */
   var cf=Math.cos(spin), sf=Math.sin(spin), ct=Math.cos(0.42), stt=Math.sin(0.42);
   /* sphere packs at 0.55 of frame, then the view zooms x1.6 so the
      ball fills the frame again (0.88) — dots grow with the zoom,
