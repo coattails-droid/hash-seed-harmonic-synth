@@ -109,13 +109,11 @@ function randHash(){var s="",c="0123456789abcdef";for(var i=0;i<64;i++)s+=c[Math
 
 /* ---------- tables ---------- */
 var PRESETS=[
- {n:"Sunline",       w:35, iv:[0,2,4,7,9],          names:"D E F# A B",       vamp:[0,9], vampN:"I–vi",  flat:false},
- {n:"Lydian lift",   w:20, iv:[0,2,4,6,7,9,11],     names:"D E F# G# A B C#", vamp:[0,2], vampN:"I–II",  flat:false},
- {n:"Hirajoshi dusk",w:15, iv:[0,2,3,7,8],          names:"D E F A Bb",       vamp:[0,8], vampN:"i–bVI", flat:true},
- {n:"Hijaz fire",    w:12, iv:[0,1,4,5,7,8,10],     names:"D Eb F# G A Bb C", vamp:[0,1], vampN:"i–bII", flat:true},
- {n:"Overtone",      w:8,  iv:[0,2,4,6,7,9,10],     names:"D E F# G# A B C",  vamp:[0,7], vampN:"I7–V7", flat:false},
- {n:"Byzantine",     w:6,  iv:[0,1,4,5,7,8,11],     names:"D Eb F# G A Bb C#",vamp:[0,1], vampN:"i–bII", flat:true},
- {n:"Slendro haze",  w:4,  cents:[0,240,480,720,960],names:"slendro 5-TET",   vamp:[0,9], vampN:"I–vi",  flat:false, lockTuning:true}
+ {n:"Sunline",       w:42, iv:[0,2,4,7,9],          names:"D E F# A B",       vamp:[0,9], vampN:"I–vi",  flat:false},
+ {n:"Lydian lift",   w:24, iv:[0,2,4,6,7,9,11],     names:"D E F# G# A B C#", vamp:[0,2], vampN:"I–II",  flat:false},
+ {n:"Hirajoshi dusk",w:18, iv:[0,2,3,7,8],          names:"D E F A Bb",       vamp:[0,8], vampN:"i–bVI", flat:true},
+ {n:"Overtone",      w:9,  iv:[0,2,4,6,7,9,10],     names:"D E F# G# A B C",  vamp:[0,7], vampN:"I7–V7", flat:false},
+ {n:"Byzantine",     w:7,  iv:[0,1,4,5,7,8,11],     names:"D Eb F# G A Bb C#",vamp:[0,1], vampN:"i–bII", flat:true}
 ];
 var TUNINGS=["12-TET","5-Limit Just","Pythagorean","¼-Comma Meantone"];
 var PATHS=[
@@ -132,7 +130,7 @@ var NAMES_F=["C","Db","D","Eb","E","F","Gb","G","Ab","A","Bb","B"];
 var RING_N=[12,33,33,21], RING_R=[0.17,0.40,0.60,0.82];
 /* Tidal Geometries' six neon dot colors — the accent field, fixed across that series */
 var DOT_COLORS=["#b6ff00","#00ff66","#00f0ff","#2e6bff","#8b2bff","#ff2bd6"];
-var PRESET_COLORS=["#b6ff00","#00ff66","#00f0ff","#2e6bff","#8b2bff","#ff2bd6","#b6ff00"];
+var PRESET_COLORS=["#b6ff00","#00ff66","#00f0ff","#8b2bff","#ff2bd6"];
 function hexA(hx,a){var n=parseInt(hx.slice(1),16);return "rgba("+(n>>16&255)+","+(n>>8&255)+","+(n&255)+","+a+")";}
 
 /* ---------- tuning: root-relative, degrees spelled per root ----------
@@ -190,11 +188,8 @@ var STEP=1440/54/24, LOOP_SEC=1440/54, seq=[], pathPtr=0;
 var walkF=0, chordHalf=0, playRoot=0, FIFTH_DEG=4;
 function fifthStepDeg(){ var iv=ladderIv(),best=1,bd=1e9; for(var d=1;d<=12;d++){ var dd=Math.abs(degToSemi(d,iv)-7); if(dd<bd){bd=dd;best=d;} } return best; }
 function baseMidi(){return 24+playRoot;}   /* series anchor: the C3 register — each dot's octave is dealt across C3-C4 in buildDots, locked for the series */
-function curScaleLen(){return preset.cents?preset.cents.length:preset.iv.length;}
-function ladderIv(){
-  if(preset.iv)return preset.iv;
-  return preset.cents.map(function(c){return c/100;});
-}
+function curScaleLen(){return preset.iv.length;}
+function ladderIv(){ return preset.iv; }
 function buildSeq(){
   var N=eff("states"),L=curScaleLen();
   var s=PATHS[eff("path")].gen(N,L,ladderIv());
@@ -244,12 +239,6 @@ function degToSemi(deg,iv){
 /* note for a degree: returns {f, mf|null} */
 function noteFreq(deg,ringOct,half){
   var vr=preset.vamp[half], bm=baseMidi();
-  if(preset.cents){
-    var L=preset.cents.length, ci=((deg%L)+L)%L, co=Math.floor(deg/L);
-    var cTot=vr*100+preset.cents[ci]+co*1200+ringOct*1200;
-    var mf2=bm+cTot/100;
-    return {f:mtof(mf2), mf:mf2};
-  }
   var semi=degToSemi(deg,preset.iv), tot=vr+semi;
   var L=preset.iv.length, vdi=preset.iv.indexOf(vr);
   var lo=(preset.letOff[((deg%L)+L)%L]+preset.letOff[vdi])%7;
@@ -374,8 +363,7 @@ function voiceStrike(nf,vel,t){
   pluck(nf.mf,vel,t-0.04); pluck(nf.mf,vel,t);
 }
 function bassNote(half,t){  /* soft root at chord change */
-  var vr=preset.vamp[half], bc=0;
-  if(!preset.cents)bc=degCents(preset.letOff[preset.iv.indexOf(vr)],vr);
+  var vr=preset.vamp[half], bc=degCents(preset.letOff[preset.iv.indexOf(vr)],vr);
   var bmf=baseMidi()+vr+bc/100;
   var f=mtof(bmf);
   midiNote(bmf,0.55,t,3.0,2);
@@ -640,7 +628,7 @@ function buildKeyboard(){
 }
 function clockSVG(p,i){
   var col=PRESET_COLORS[i];
-  var tones=p.iv?p.iv.map(function(s){return s/12;}):p.cents.map(function(c){return c/1200;});
+  var tones=p.iv.map(function(s){return s/12;});
   var cx=23, cy=23, R=17, s="";
   var pts=tones.map(function(f){var a=f*Math.PI*2-Math.PI/2;return [cx+Math.cos(a)*R, cy+Math.sin(a)*R];});
   s+='<circle cx="23" cy="23" r="20" fill="none" stroke="#2a2a2a" stroke-width="1"/>';
@@ -715,7 +703,7 @@ function drawSeq(){
 }
 function refreshReadout(){
   var manual=Object.keys(MAN).length>0;
-  var pat=preset.iv?preset.iv.join(" "):preset.cents.join("¢ ")+"¢";
+  var pat=preset.iv.join(" ");
   var mel=PATHS[eff("path")].n+" · "+eff("states")+" notes <span class='note'>["+seq.join(" ")+"]</span>";
   document.getElementById("readout").innerHTML=
     'token <b>'+hash.slice(0,12)+'…</b> '+(manual?'<span class="note">(manual override)</span>':'<span class="note">(hash-dealt)</span>')+'<br>'+
