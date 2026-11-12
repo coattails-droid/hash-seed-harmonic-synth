@@ -60,6 +60,8 @@
 
 <div class="sec" style="color:#b6ff00">PITCH</div>
 <div class="row" id="rootRow"></div>
+<div class="sec" style="color:#8a8578;font-size:10px;margin-top:10px;">OCTAVE</div>
+<div class="row" id="octRow"></div>
 
 <div class="sec" style="color:#00ff66">HARMONY</div>
 <div class="row" id="harmRow"></div>
@@ -189,7 +191,7 @@ function degCents(ti,letOff,semiFromRoot){
 /* ---------- state ---------- */
 var hash=randHash();
 var noteInst={}, keyHit={};   /* pitch instances per loop, for visualizer cores */
-var S={harmony:0,tune:2,root:0,oct:0,path:0,contour:0,states:5,
+var S={harmony:0,tune:2,root:0,oct:1,path:0,contour:0,states:5,
        loop:0,voice:2};
 var MAN={};
 function eff(k){return MAN[k]!==undefined?MAN[k]:S[k];}
@@ -198,7 +200,7 @@ function dealAll(h){
   var x=(parseInt(h.slice(0,2),16)/256)*100,acc=0,hi=0;
   for(var i=0;i<PRESETS.length;i++){acc+=PRESETS[i].w;if(x<acc){hi=i;break;}}
   S.harmony=hi;
-  S.root=D("root",12); S.oct=0;   /* octave locked to C3 at Calvin's direction; root stays dealt/selectable */
+  S.root=D("root",12); S.oct=D("oct",3);
   S.path=D("path",11); S.contour=0;   /* Shape locked to As-is at Calvin's direction — no Shape option */
   S.states=3+D("states",6);
   S.loop=D("loop",4);
@@ -630,6 +632,22 @@ function buildKeyboard(){
   });
   el.appendChild(kb);
 }
+function buildOctRow(){
+  var el=document.getElementById("octRow"); el.innerHTML="";
+  OCTAVES.forEach(function(name,i){
+    var b=document.createElement("button");
+    b.classList.add("vbtn");
+    if(i===eff("oct"))b.classList.add("on");
+    var bars="";
+    for(var j=0;j<3;j++){
+      var h=[7,12,17][j];
+      bars+='<rect x="'+(4+j*9)+'" y="'+(20-h)+'" width="6" height="'+h+'" fill="'+(j<=i?"#00f0ff":"#3a3a3a")+'"/>';
+    }
+    b.innerHTML='<svg width="34" height="22">'+bars+'</svg><div>'+name+'</div>';
+    b.onclick=function(){pick("octRow",i);};
+    el.appendChild(b);
+  });
+}
 function clockSVG(p,i){
   var col=PRESET_COLORS[i];
   var tones=p.iv?p.iv.map(function(s){return s/12;}):p.cents.map(function(c){return c/1200;});
@@ -666,7 +684,7 @@ function buildLoopRow(){
     el.appendChild(b);
   });
 }
-var KEYMAP={rootRow:"root",harmRow:"harmony",
+var KEYMAP={rootRow:"root",octRow:"oct",harmRow:"harmony",
   pathRow:"path",statesRow:"states",loopRow:"loop"};
 var VALMAP={states:[3,4,5,6,7,8]};
 function pick(id,i){
@@ -677,6 +695,7 @@ function pick(id,i){
 }
 function syncUI(){
   buildKeyboard();
+  buildOctRow();
   buildHarmRow();
   mkRow("pathRow",PATHS.map(function(p){return p.n;}),eff("path"));
   mkRow("statesRow",[3,4,5,6,7,8],eff("states")-3);
