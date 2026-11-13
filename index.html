@@ -217,8 +217,10 @@ function buildDots(){
        even height steps, golden-angle turns */
     var sy=1-2*(idx+0.5)/99, sr=Math.sqrt(Math.max(0,1-sy*sy)), st=idx*GA;
     /* the series octave is the C3-C4 blend: each dot's register is
-       dealt as a fair coin between the two registers (balanced) */
-    var blendHigh=rnd()<0.5;
+       dealt 75% into the high register — Calvin's pick from the
+       A/B/C audition 2026-11-12 (C), superseding the same-day
+       balanced 50/50 deal; he found 50/50 moody overall */
+    var blendHigh=rnd()<0.75;
     dots.push({
       px:sr*Math.cos(st), py:sy, pz:sr*Math.sin(st),
       h:h, ph:0.25-dir*pk*h/24, dir:dir,
