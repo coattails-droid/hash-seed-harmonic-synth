@@ -19,32 +19,32 @@
   h1 { font-size:24px; letter-spacing:4px; margin:22px 0 4px; font-weight:normal;
        background:linear-gradient(90deg,#b6ff00,#00ff66,#00f0ff,#2e6bff,#8b2bff,#ff2bd6);
        -webkit-background-clip:text; background-clip:text; color:transparent; }
-  .credit { font-size:12.5px; color:#b8b2a4; text-align:center; margin:0 0 6px; letter-spacing:0.4px;}
-  .sub { font-size:11px; color:#8a8578; margin-bottom:10px; letter-spacing:1px; text-align:center; padding:0 16px; line-height:1.7;}
+  .credit { font-size:14px; color:#b8b2a4; text-align:center; margin:0 0 6px; letter-spacing:0.4px;}
+  .sub { font-size:12.5px; color:#8a8578; margin-bottom:10px; letter-spacing:1px; text-align:center; padding:0 16px; line-height:1.7;}
   canvas { border:1px solid #2a2a2a; border-radius:8px; background:#000; }
   #cv { width:min(480px,94vw); height:auto; }
   #seqCv { max-width:94vw; height:auto; }
-  .sec { font-size:11px; letter-spacing:2px; color:#00f0ff; margin:16px 0 6px; }
+  .sec { font-size:12.5px; letter-spacing:2px; color:#00f0ff; margin:16px 0 6px; }
   .row { display:flex; gap:8px; margin:6px 0; align-items:center; flex-wrap:wrap; justify-content:center; max-width:760px;}
   button { background:#1a1a1a; color:#e8e4d8; border:1px solid #3a3a3a; border-radius:6px;
-           font-family:monospace; font-size:12px; padding:8px 13px; cursor:pointer; letter-spacing:1px;}
+           font-family:monospace; font-size:13px; padding:8px 13px; cursor:pointer; letter-spacing:1px;}
   button:hover { background:#2a2a2a; }
   button.on { border-color:#00f0ff; color:#00f0ff; background:#04222a; }
   button:disabled { opacity:0.32; cursor:default; }
-  button.big { font-size:17px; padding:15px 38px; border-radius:8px; border-color:#00f0ff; color:#00f0ff;}
+  button.big { font-size:19px; padding:15px 38px; border-radius:8px; border-color:#00f0ff; color:#00f0ff;}
   button.big.playing { background:#00f0ff; color:#000; }
-  .wt { color:#8a8578; font-size:10px; }
-  .readout { font-size:12px; color:#8a8578; text-align:center; line-height:1.9; max-width:720px; padding:6px 16px 12px;}
+  .wt { color:#8a8578; font-size:11.5px; }
+  .readout { font-size:14px; color:#8a8578; text-align:center; line-height:1.9; max-width:720px; padding:6px 16px 12px;}
   .readout b { color:#e8e4d8; font-weight:normal;}
   .chord { color:#ff2bd6; }
   .trait { color:#00f0ff; }
-  .note { font-size:10px; color:#5a554a; }
+  .note { font-size:11.5px; color:#5a554a; }
   input[type=range] { accent-color:#00f0ff; width:130px;}
-  .rlabel { font-size:11px; color:#8a8578; margin-top:9px; letter-spacing:1px;}
+  .rlabel { font-size:12.5px; color:#8a8578; margin-top:9px; letter-spacing:1px;}
   .vbtn { display:inline-flex; flex-direction:column; align-items:center; gap:4px; }
   .track { width:64px; height:3px; background:#2a2a2a; border-radius:2px; }
   .fill { height:3px; background:#00f0ff; border-radius:2px; }
-  select { background:#1a1a1a; color:#e8e4d8; border:1px solid #3a3a3a; border-radius:6px; font-family:monospace; font-size:12px; padding:8px; }
+  select { background:#1a1a1a; color:#e8e4d8; border:1px solid #3a3a3a; border-radius:6px; font-family:monospace; font-size:13px; padding:8px; }
   .soc { font-family:monospace; font-size:12px; letter-spacing:1px; text-decoration:none; border:1px solid #3a3a3a; border-radius:6px; padding:8px 16px; background:#1a1a1a; }
   .soc:hover { background:#2a2a2a; }
 
@@ -53,7 +53,7 @@
   .lkf .socials a { display: inline-flex; align-items: center; justify-content: center; width: 46px; height: 46px; border: 1px solid #3a362c; border-radius: 50%; color: #e8e2d4; }
   .lkf .socials a:hover { border-color: #ffc46e; color: #ffc46e; }
   .lkf .socials svg { width: 21px; height: 21px; fill: currentColor; }
-  .lkf .fine { color: #9a937f; font-size: 13px; }
+  .lkf .fine { color: #9a937f; font-size: 14.5px; }
 </style>
 </head>
 <body>
@@ -90,9 +90,6 @@
 <div class="readout">Ninety-nine dots ride a Fibonacci sphere — even height steps, golden-angle turns — which turns half a revolution per loop. Each dot is dealt a harmonic — 2, 3, 4, 6, 8 or 12 — and blinks at that multiple of the loop's frequency, its peaks locked to the loop's 24 beats, so the sphere's rhythm repeats exactly, loop after loop. Depth does the shading: the far side paints first, smaller and dimmer, and dots swell as they swing near. A struck dot flashes the grey core and black pinprick borrowed from Tidal Geometries and throws a train of three ripples; every other dot that sounded the same pitch earlier in the loop answers with a dimmer core. A faint thread spirals through the points, fading with depth.</div>
 <div class="sec" style="color:#ff2bd6">BUILD</div>
 <div class="readout">Every token is a hash, and the hash deals the song: a root key, one of five harmonies — Sunline, Lydian Lift, Hirajoshi Dusk, Overtone and Byzantine, an even 20% each — one of six melodic interval paths, three to eight notes in the pattern, and a tempo of 54, 40 or 32 BPM, one strike per beat, 24 beats to a loop. The melody walks its path inside a frame the sphere steers itself: strikes vote the frame around the circle of fifths, and the chord can step only at the loop's midpoint, when the ring of third-harmonic dots peaks together. The token never changes key and the walk resets every loop — a token's song is consistent forever.<br><br>The octave is a C3–C4 blend, each dot dealt 75% into the high register. Tuning is Pythagorean and letter-exact — every pitch spelled, never rounded — at A4 = 432 Hz. Each strike layers pluck and throat with a 40 ms flam, shadowed by a second voice a fifth above; where a scale spells a sour fifth, the shadow snaps to a true Pythagorean fifth. A low bass anchors each half of the loop and carries a quiet 2× harmonic, so the root survives small speakers. Strikes are flat — no accents — and the sound runs through a mastering chain of glue compression, a −3.5 dB limiter and a soft clipper that caps the loudest possible moment at −1.07 dBFS. MIDI out streams melody, fifth and bass on three channels, each note bent to its exact Pythagorean pitch. Leave the tab, and the music stops.</div>
-<div class="row" style="margin-bottom:18px">
-  <a class="soc" style="border-color:#b6ff00;color:#b6ff00" href="https://artist.coattails.eth.limo" target="_blank" rel="noopener">artist.coattails.eth</a>
-</div>
 <footer class="lkf">
   <div class="socials">
     <a href="https://www.facebook.com/calvinfought/" aria-label="Facebook" title="Facebook"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M24 12.07C24 5.4 18.63 0 12 0S0 5.4 0 12.07C0 18.1 4.39 23.09 10.13 24v-8.44H7.08v-3.49h3.04V9.41c0-3.02 1.8-4.7 4.54-4.7 1.31 0 2.68.24 2.68.24v2.97h-1.5c-1.5 0-1.96.93-1.96 1.89v2.26h3.32l-.53 3.49h-2.8V24C19.62 23.1 24 18.1 24 12.07z"/></svg></a>
