@@ -371,13 +371,22 @@ function pluck(mf,vel,t){  /* production voice, midiFloat in */
   g.gain.setValueAtTime(0.0001,t);
   g.gain.linearRampToValueAtTime(vel*0.18,t+0.008);
   g.gain.exponentialRampToValueAtTime(0.0001,t+2.8);
+  var oscs=[], pgs=[];
   [[1,1.0],[2,0.25],[2.99,0.10]].forEach(function(p){
     var o=ctx.createOscillator(); o.type="sine"; o.frequency.value=f*p[0];
     var pg=ctx.createGain(); pg.gain.value=p[1];
     o.connect(pg); pg.connect(fl); o.start(t); o.stop(t+3.0);
+    oscs.push(o); pgs.push(pg);
   });
   fl.connect(g); g.connect(dryBus);
   var s=ctx.createGain(); s.gain.value=0.6; g.connect(s); s.connect(fxSend);
+  /* crackle fix: disconnect the whole note subgraph the moment its
+     oscillators end, instead of leaving reclamation to the browser's
+     garbage collector (the synth creates ~55 nodes/sec; on slower
+     devices GC lag lets dead nodes pile up in the render graph) */
+  oscs[0].onended=function(){
+    oscs.concat(pgs).concat([fl,g,s]).forEach(function(n){ try{n.disconnect();}catch(e){} });
+  };
 }
 function throatNote(f,vel,t){
   var o=ctx.createOscillator(); o.type="sine";
@@ -394,6 +403,9 @@ function throatNote(f,vel,t){
   o.connect(g); g2.connect(g); g.connect(dryBus);
   var se=ctx.createGain(); se.gain.value=0.55; g.connect(se); se.connect(fxSend);
   o.start(t); o.stop(t+4); o2.start(t); o2.stop(t+4); vib.start(t); vib.stop(t+4);
+  o.onended=function(){  /* crackle fix: explicit subgraph cleanup, see pluck */
+    [o,o2,vib,vg,g2,g,se].forEach(function(n){ try{n.disconnect();}catch(e){} });
+  };
 }
 function voiceStrike(nf,vel,t){
   /* voice is locked to Both: pluck and throat layer on the same
@@ -421,12 +433,17 @@ function swellNote(half,t){  /* third voice: warm bass swell — the
   g.gain.setValueAtTime(0.11,t+Math.max(atk,dur-rel));
   g.gain.linearRampToValueAtTime(0.0001,t+dur);
   flt.connect(g); g.connect(dryBus);
+  var parts=[];
   function partial(mult,type,amt){
     var o=ctx.createOscillator(); o.type=type; o.frequency.value=f*mult;
     var og=ctx.createGain(); og.gain.value=amt;
     o.connect(og); og.connect(flt); o.start(t); o.stop(t+dur+0.1);
+    parts.push(o,og);
   }
   partial(1,"sine",1.0); partial(1,"triangle",0.5); partial(2,"sine",0.5);
+  parts[0].onended=function(){  /* crackle fix: explicit subgraph cleanup, see pluck */
+    parts.concat([flt,g]).forEach(function(n){ try{n.disconnect();}catch(e){} });
+  };
 }
 function bassNote(half,t){  /* soft root at chord change */
   var vr=preset.vamp[half], bc=degCents(preset.letOff[preset.iv.indexOf(vr)],vr);
@@ -452,6 +469,9 @@ function bassNote(half,t){  /* soft root at chord change */
   g2.gain.exponentialRampToValueAtTime(0.0001,t+2.2);
   o2.connect(g2); g2.connect(dryBus);
   o2.start(t); o2.stop(t+2.4);
+  o.onended=function(){  /* crackle fix: explicit subgraph cleanup, see pluck */
+    [o,o2,g,g2].forEach(function(n){ try{n.disconnect();}catch(e){} });
+  };
 }
 function nextDeg(){
   var d=seq[pathPtr%seq.length]; pathPtr++; return d;
